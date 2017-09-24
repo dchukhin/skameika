@@ -3,6 +3,13 @@
 
 {% block content %}
 
+<h2>New Transaction</h2>
+<form action="" method="POST" class="form">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit" class="btn btn-primary">Submit</button>
+</form>
+
 <h2>Current Transactions</h2>
 <table class="table">
   <thead>
@@ -29,12 +36,6 @@
   </tbody>
 </table>
 
-<h2>New Transaction</h2>
-<form action="" method="POST" class="form">
-  {% csrf_token %}
-  {{ form.as_p }}
-  <button type="submit" class="btn btn-primary">Submit</button>
-</form>
 
 <nav>
   <ul class="pagination">
