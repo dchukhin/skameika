@@ -58,3 +58,6 @@ class Transaction(models.Model):
         # This is a unique slug, so set it to self.slug
         self.slug = potential_slug
         super().save(*args, **kwargs)
+
+    class Meta:
+        ordering = ('-date', )
