@@ -22,6 +22,7 @@ class Transaction(models.Model):
     slug = models.SlugField(unique=True)
     date = models.DateTimeField(default=timezone.now)
     category = models.ForeignKey(Category)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.CharField(max_length=255, blank=True)
     receipt = models.ImageField(upload_to='transaction_receipts/', blank=True)
     pending = models.BooleanField(default=False)

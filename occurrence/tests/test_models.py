@@ -1,6 +1,4 @@
-from django.conf import settings
 from django.test import TestCase
-from django.utils import timezone
 
 from . import factories
 from .. import models
@@ -17,12 +15,11 @@ class TestTransaction(TestCase):
     def test_str(self):
         """Smoke test for string representation."""
         transaction = factories.TransactionFactory()
-        settings_tz = timezone.pytz.timezone(settings.TIME_ZONE)
         self.assertEqual(
             str(transaction),
             '{} - {}'.format(
                 transaction.title,
-                transaction.date.astimezone(settings_tz).strftime('%Y-%m-%d %H:%M:%S')
+                transaction.date.strftime('%Y-%m-%d')
             )
         )
 

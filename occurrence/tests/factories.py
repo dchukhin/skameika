@@ -23,6 +23,7 @@ class TransactionFactory(factory.django.DjangoModelFactory):
         timezone.datetime(year=2017, month=1, day=1, tzinfo=timezone.pytz.utc)
     )
     category = factory.SubFactory(CategoryFactory)
+    amount = factory.fuzzy.FuzzyDecimal(low=0, high=1000)
     description = factory.fuzzy.FuzzyText()
 
     class Meta:
