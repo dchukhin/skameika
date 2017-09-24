@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+{% for transaction in transactions %}
+  <div class="col-sm-12">
+    <div class="col-sm-2">{{ transaction.date }}</div>
+    <div class="col-sm-2">{{ transaction.title }}</div>
+    <div class="col-sm-2">{{ transaction.category }}</div>
+    <div class="col-sm-3">{{ transaction.description }}</div>
+  </div>
+{% endfor %}
+
+{% endblock content %}
