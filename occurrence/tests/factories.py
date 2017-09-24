@@ -30,7 +30,6 @@ class TransactionFactory(factory.django.DjangoModelFactory):
     date = factory.fuzzy.FuzzyDate(
         datetime.date(year=2017, month=1, day=1)
     )
-    month = factory.SubFactory(MonthFactory)
     category = factory.SubFactory(CategoryFactory)
     amount = factory.fuzzy.FuzzyDecimal(low=0, high=1000)
     description = factory.fuzzy.FuzzyText()

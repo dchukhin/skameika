@@ -56,7 +56,7 @@ class Transaction(models.Model):
         )
 
     def save(self, *args, **kwargs):
-        """Make sure the slug field is unique, then continue saving."""
+        """Make sure the slug field is unique, and associate with a Month."""
         # Create a potential_slug based on title and self.date (including year,
         # month, day)
         potential_slug = '{}-{}'.format(
@@ -78,6 +78,20 @@ class Transaction(models.Model):
                 i += 1
         # This is a unique slug, so set it to self.slug
         self.slug = potential_slug
+
+        # Try to find a Month for this Transaction's date
+        try:
+            month = Month.objects.get(month=self.date.month, year=self.date.year)
+        except Month.DoesNotExist:
+            # A Month for this Transaction's date does not exist, so create one
+            month = Month.objects.create(
+                month=self.date.month,
+                year=self.date.year,
+                name=self.date.strftime('%B, %Y')
+            )
+        # Associate this Transaction with the correct Month for its date
+        self.month = month
+
         super().save(*args, **kwargs)
 
     class Meta:
