@@ -1,6 +1,6 @@
-from django.conf import settings
+from datetime import date
+
 from django.db import models
-from django.utils import timezone
 from django.utils.text import slugify
 
 
@@ -20,7 +20,7 @@ class Transaction(models.Model):
     """Model for tracking transactions that occur."""
     title = models.CharField(max_length=255)
     slug = models.SlugField(unique=True)
-    date = models.DateTimeField(default=timezone.now)
+    date = models.DateField(default=date.today)
     category = models.ForeignKey(Category)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.CharField(max_length=255, blank=True)
@@ -29,19 +29,18 @@ class Transaction(models.Model):
 
     def __str__(self):
         """Return the title and date of the Transaction, in the settings.TIME_ZONE."""
-        settings_tz = timezone.pytz.timezone(settings.TIME_ZONE)
         return '{} - {}'.format(
             self.title,
-            self.date.astimezone(settings_tz).strftime('%Y-%m-%d %H:%M:%S')
+            self.date.strftime('%Y-%m-%d')
         )
 
     def save(self, *args, **kwargs):
         """Make sure the slug field is unique, then continue saving."""
         # Create a potential_slug based on title and self.date (including year,
-        # month, day, hour, minute, second)
+        # month, day)
         potential_slug = '{}-{}'.format(
             slugify(self.title),
-            self.date.strftime('%Y-%m-%d-%H-%M-%S')
+            self.date.strftime('%Y-%m-%d')
         )
         # Does a Transaction with this slug already exist?
         if self.__class__.objects.filter(slug=potential_slug).exists():
