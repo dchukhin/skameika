@@ -11,6 +11,13 @@ class TestCategory(TestCase):
         self.assertEqual(str(category), category.name)
 
 
+class TestMonth(TestCase):
+    def test_str(self):
+        """Smoke test for string representation."""
+        month = factories.MonthFactory()
+        self.assertEqual(str(month), month.name)
+
+
 class TestTransaction(TestCase):
     def test_str(self):
         """Smoke test for string representation."""

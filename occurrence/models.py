@@ -16,11 +16,32 @@ class Category(models.Model):
         ordering = ('name', )
 
 
+class Month(models.Model):
+    """
+    A month of time.
+
+    We could avoid having this model, since the data is already in the Transaction
+    model, but having it makes calculations of Transactions, etc. by month faster.
+    """
+    month = models.PositiveSmallIntegerField()
+    year = models.PositiveSmallIntegerField()
+    name = models.CharField(max_length=100)
+
+    def __str__(self):
+        """Return the name of the Month."""
+        return self.name
+
+
 class Transaction(models.Model):
     """Model for tracking transactions that occur."""
     title = models.CharField(max_length=255)
     slug = models.SlugField(unique=True)
     date = models.DateField(default=date.today)
+    month = models.ForeignKey(
+        Month,
+        help_text="The month that this Transaction occurred in.",
+        on_delete=models.PROTECT  # Don't allow a Month to be deleted if it has Transactions
+    )
     category = models.ForeignKey(Category)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.CharField(max_length=255, blank=True)
