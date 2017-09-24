@@ -7,4 +7,7 @@ urlpatterns = [
     url(r'^transactions/$',
         views.transactions,
         name='transactions'),
+    url(r'^totals/$',
+        views.totals,
+        name='totals'),
 ]

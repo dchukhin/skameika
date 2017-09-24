@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+
+{% block content %}
+
+
+<h2>Totals</h2>
+<table class="table">
+  <thead>
+    <tr>
+      <th>Category</th>
+      <th>Total</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for category in categories %}
+      <tr>
+        <td>{{ category.name }}</td>
+        <td>{{ category.total }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<nav>
+  <ul class="pagination">
+    {% for month in months %}
+      <li class="{% if current_month == month %}active{% endif %}">
+        <a href="{% url "totals" %}?month_name={{ month.name }}">
+          {{ month }}
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+</nav>
+
+{% endblock content %}
