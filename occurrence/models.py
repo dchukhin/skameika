@@ -31,6 +31,9 @@ class Month(models.Model):
         """Return the name of the Month."""
         return self.name
 
+    class Meta:
+        ordering = ('-year', '-month', )
+
 
 class Transaction(models.Model):
     """Model for tracking transactions that occur."""
@@ -39,6 +42,7 @@ class Transaction(models.Model):
     date = models.DateField(default=date.today)
     month = models.ForeignKey(
         Month,
+        blank=True,
         help_text="The month that this Transaction occurred in.",
         on_delete=models.PROTECT  # Don't allow a Month to be deleted if it has Transactions
     )
