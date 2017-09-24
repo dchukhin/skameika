@@ -11,4 +11,11 @@
   </div>
 {% endfor %}
 
+<h2>New Transaction</h2>
+<form action="" method="POST" class="form">
+  {% csrf_token %}
+  {{ form }}
+  <button type="submit" class="btn btn-primary">Submit</button>
+</form>
+
 {% endblock content %}

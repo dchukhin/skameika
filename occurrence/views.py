@@ -8,5 +8,6 @@ def transactions(request):
     transactions = models.Transaction.objects.all()
     context = {
         'transactions': transactions,
+        'form': forms.TransactionForm,
     }
     return render(request, 'occurrence/transactions.html', context)
