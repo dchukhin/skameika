@@ -7,4 +7,4 @@ class TransactionForm(forms.ModelForm):
 
     class Meta:
         model = models.Transaction
-        exclude = []
+        exclude = ['slug']
