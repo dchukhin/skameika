@@ -2,6 +2,7 @@ from datetime import date
 
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404, render
+from django.utils.text import slugify
 
 from . import forms, models
 
@@ -41,23 +42,24 @@ def transactions(request, *args, **kwargs):
 
 def totals(request, *args, **kwargs):
     """Show totals (for Transactions) by category."""
-    if request.GET.get('month_name'):
+    if request.GET.get('month'):
         current_month = get_object_or_404(
             models.Month.objects.all(),
-            name=request.GET.get('month_name')
+            slug=request.GET.get('month')
         )
     else:
         current_month = models.Month.objects.get_or_create(
             year=date.today().year,
             month=date.today().month,
             name=date.today().strftime('%B, %Y'),
+            slug=slugify(date.today().strftime('%B, %Y')),
         )[0]
 
     context = {}
 
-    month_name = request.GET.get('month_name')
-    if month_name:
-        month = get_object_or_404(models.Month.objects.all(), name=month_name)
+    month_slug = request.GET.get('month')
+    if month_slug:
+        month = get_object_or_404(models.Month.objects.all(), slug=month_slug)
         categories = models.Category.objects.filter(transaction__month=month).annotate(
             total=Sum('transaction__amount')
         )

@@ -26,7 +26,7 @@
   <ul class="pagination">
     {% for month in months %}
       <li class="{% if current_month == month %}active{% endif %}">
-        <a href="{% url "totals" %}?month_name={{ month.name }}">
+        <a href="{% url "totals" %}?month={{ month.slug }}">
           {{ month }}
         </a>
       </li>
