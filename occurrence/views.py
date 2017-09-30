@@ -1,7 +1,8 @@
 from datetime import date
 
 from django.db.models import Sum
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils.text import slugify
 
 from . import forms, models
@@ -42,12 +43,10 @@ def transactions(request, *args, **kwargs):
 
 def totals(request, *args, **kwargs):
     """Show totals (for Transactions) by category."""
-    if request.GET.get('month'):
-        current_month = get_object_or_404(
-            models.Month.objects.all(),
-            slug=request.GET.get('month')
-        )
-    else:
+    month_slug = request.GET.get('month')
+    # If the user did not provide a month_slug, then redirect to the totals
+    # for the current month
+    if not month_slug:
         current_month = models.Month.objects.get_or_create(
             year=date.today().year,
             month=date.today().month,
@@ -55,17 +54,16 @@ def totals(request, *args, **kwargs):
             slug=slugify(date.today().strftime('%B, %Y')),
         )[0]
 
-    context = {}
+        return redirect('{}?month={}'.format(reverse('totals'), current_month.slug))
 
-    month_slug = request.GET.get('month')
-    if month_slug:
-        month = get_object_or_404(models.Month.objects.all(), slug=month_slug)
-        categories = models.Category.objects.filter(transaction__month=month).annotate(
-            total=Sum('transaction__amount')
-        )
-        context = {
-            'categories': categories,
-        }
-    context['months'] = models.Month.objects.all()
-    context['current_month'] = current_month
+    current_month = get_object_or_404(models.Month.objects.all(), slug=month_slug)
+    month = get_object_or_404(models.Month.objects.all(), slug=month_slug)
+    categories = models.Category.objects.filter(transaction__month=month).annotate(
+        total=Sum('transaction__amount')
+    )
+    context = {
+        'categories': categories,
+        'months': models.Month.objects.all(),
+        'current_month': current_month,
+    }
     return render(request, 'occurrence/totals.html', context)
