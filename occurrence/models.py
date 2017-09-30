@@ -26,6 +26,7 @@ class Month(models.Model):
     month = models.PositiveSmallIntegerField()
     year = models.PositiveSmallIntegerField()
     name = models.CharField(max_length=100)
+    slug = models.SlugField(unique=True)
 
     def __str__(self):
         """Return the name of the Month."""
@@ -91,7 +92,8 @@ class Transaction(models.Model):
             month = Month.objects.create(
                 month=self.date.month,
                 year=self.date.year,
-                name=self.date.strftime('%B, %Y')
+                name=self.date.strftime('%B, %Y'),
+                slug=slugify(self.date.strftime('%B, %Y')),
             )
         # Associate this Transaction with the correct Month for its date
         self.month = month

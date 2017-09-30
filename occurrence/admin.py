@@ -11,7 +11,7 @@ class CategoryAdmin(admin.ModelAdmin):
 
 @admin.register(models.Month)
 class MonthAdmin(admin.ModelAdmin):
-    pass
+    prepopulated_fields = {'slug': ('name', )}
 
 
 @admin.register(models.Transaction)

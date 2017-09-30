@@ -19,6 +19,7 @@ class MonthFactory(factory.django.DjangoModelFactory):
     month = factory.fuzzy.FuzzyInteger(low=1, high=12)
     year = factory.fuzzy.FuzzyInteger(low=2000, high=2020)
     name = factory.fuzzy.FuzzyText()
+    slug = factory.LazyAttribute(lambda o: slugify(o.name))
 
     class Meta:
         model = 'occurrence.Month'
