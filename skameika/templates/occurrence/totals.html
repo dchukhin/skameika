@@ -14,9 +14,9 @@
   </thead>
   <tbody>
     {% for category in categories %}
-      <tr>
-        <td>{{ category.name }}</td>
-        <td>{{ category.total }}</td>
+      <tr class="category-row">
+        <td id="name-{{ category.slug }}">{{ category.name }}</td>
+        <td id="total-{{ category.slug }}">{{ category.total }}</td>
       </tr>
     {% endfor %}
   </tbody>
