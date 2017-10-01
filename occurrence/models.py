@@ -66,18 +66,6 @@ class TransactionBase(models.Model):
             self.date.strftime('%Y-%m-%d')
         )
 
-    class Meta:
-        abstract = True
-
-
-class ExpenseTransaction(TransactionBase):
-    """Model for tracking (expense) transactions that occur."""
-    category = models.ForeignKey(
-        Category,
-        limit_choices_to={'type_cat': Category.TYPE_EXPENSE}
-    )
-    pending = models.BooleanField(default=False)
-
     def save(self, *args, **kwargs):
         """Make sure the slug field is unique, and associate with a Month."""
         # Create a potential_slug based on title and self.date (including year,
@@ -117,6 +105,29 @@ class ExpenseTransaction(TransactionBase):
         self.month = month
 
         super().save(*args, **kwargs)
+
+    class Meta:
+        abstract = True
+
+
+class ExpenseTransaction(TransactionBase):
+    """Model for tracking (expense) transactions that occur."""
+    category = models.ForeignKey(
+        Category,
+        limit_choices_to={'type_cat': Category.TYPE_EXPENSE}
+    )
+    pending = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ('-date', )
+
+
+class EarningTransaction(TransactionBase):
+    """Model for tracking income transactions that occur."""
+    category = models.ForeignKey(
+        Category,
+        limit_choices_to={'type_cat': Category.TYPE_INCOME}
+    )
 
     class Meta:
         ordering = ('-date', )

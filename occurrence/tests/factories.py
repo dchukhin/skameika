@@ -18,11 +18,11 @@ class CategoryFactory(factory.django.DjangoModelFactory):
 
 
 class IncomeCategoryFactory(CategoryFactory):
-    cat_type = models.Category.TYPE_INCOME
+    type_cat = models.Category.TYPE_INCOME
 
 
 class ExpenseCategoryFactory(CategoryFactory):
-    cat_type = models.Category.TYPE_EXPENSE
+    type_cat = models.Category.TYPE_EXPENSE
 
 
 class MonthFactory(factory.django.DjangoModelFactory):
@@ -41,9 +41,23 @@ class ExpenseTransactionFactory(factory.django.DjangoModelFactory):
     date = factory.fuzzy.FuzzyDate(
         datetime.date(year=2017, month=1, day=1)
     )
-    category = factory.SubFactory(CategoryFactory)
+    category = factory.SubFactory(ExpenseCategoryFactory)
     amount = factory.fuzzy.FuzzyDecimal(low=0, high=1000)
     description = factory.fuzzy.FuzzyText()
 
     class Meta:
         model = 'occurrence.ExpenseTransaction'
+
+
+class EarningTransactionFactory(factory.django.DjangoModelFactory):
+    title = factory.fuzzy.FuzzyText()
+    slug = factory.LazyAttribute(lambda o: slugify(o.title))
+    date = factory.fuzzy.FuzzyDate(
+        datetime.date(year=2017, month=1, day=1)
+    )
+    category = factory.SubFactory(IncomeCategoryFactory)
+    amount = factory.fuzzy.FuzzyDecimal(low=0, high=1000)
+    description = factory.fuzzy.FuzzyText()
+
+    class Meta:
+        model = 'occurrence.EarningTransaction'
