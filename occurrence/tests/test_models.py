@@ -61,7 +61,6 @@ class TransactionBaseMixin(object):
             self.assertEqual(self.model_class.objects.count(), 3)
             self.assertNotEqual(transaction3.slug, transaction1.slug)
 
-
     def test_save_associate_month(self):
         """Saving a Transaction without a Month associates it with correct Month."""
         with self.subTest('new Transaction with no associated month; no Month object'):
