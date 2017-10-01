@@ -5,6 +5,9 @@
 
 
 <h2>Totals</h2>
+
+
+<h3>Earnings</h3>
 <table class="table">
   <thead>
     <tr>
@@ -13,19 +16,57 @@
     </tr>
   </thead>
   <tbody>
-    {% for category in categories %}
+    {% for category in earning_categories %}
       <tr class="category-row">
-        <td id="name-{{ category.slug }}">{{ category.name }}</td>
+        <td class="col-sm-8" id="name-{{ category.slug }}">{{ category.name }}</td>
         <td id="total-{{ category.slug }}">{{ category.total }}</td>
       </tr>
     {% endfor %}
+    <tr>
+      <td class="col-sm-8">Total</td>
+      <td>{{ earning_total }}</td>
+    </tr>
   </tbody>
 </table>
+
+<h3>Expenses</h3>
+<table class="table">
+  <thead>
+    <tr>
+      <th>Category</th>
+      <th>Total</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for category in expense_categories %}
+      <tr class="category-row">
+        <td class="col-sm-8" id="name-{{ category.slug }}">{{ category.name }}</td>
+        <td id="total-{{ category.slug }}">{{ category.total }}</td>
+      </tr>
+    {% endfor %}
+    <tr>
+      <td class="col-sm-8">Total</td>
+      <td>{{ expense_total }}</td>
+    </tr>
+  </tbody>
+</table>
+
+
+<h3>Total</h3>
+<table class="table">
+  <tbody>
+    <tr>
+      <td class="col-sm-8">Total</td>
+      <td>{{ total }}</td>
+    </tr>
+  </tbody>
+</table>
+
 
 <nav>
   <ul class="pagination">
     {% for month in months %}
-      <li class="{% if current_month == month %}active{% endif %}">
+      <li class="{% if active_month == month %}active{% endif %}">
         <a href="{% url "totals" %}?month={{ month.slug }}">
           {{ month }}
         </a>

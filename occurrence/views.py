@@ -63,17 +63,33 @@ def totals(request, *args, **kwargs):
             name=date.today().strftime('%B, %Y'),
             slug=slugify(date.today().strftime('%B, %Y')),
         )[0]
-
         return redirect('{}?month={}'.format(reverse('totals'), current_month.slug))
 
-    current_month = get_object_or_404(models.Month.objects.all(), slug=month_slug)
     month = get_object_or_404(models.Month.objects.all(), slug=month_slug)
-    categories = models.Category.objects.filter(expensetransaction__month=month).annotate(
+    # Calculate the expense totals for this month
+    expense_categories = models.Category.objects.filter(
+        type_cat=models.Category.TYPE_EXPENSE,
+        expensetransaction__month=month
+    ).annotate(
         total=Sum('expensetransaction__amount')
     )
+    expense_total = expense_categories.aggregate(grand_total=Sum('total'))['grand_total'] or 0
+    # Calculate the earning totals for this month
+    earning_categories = models.Category.objects.filter(
+        type_cat=models.Category.TYPE_INCOME,
+        earningtransaction__month=month
+    ).annotate(
+        total=Sum('earningtransaction__amount')
+    )
+    earning_total = earning_categories.aggregate(grand_total=Sum('total'))['grand_total'] or 0
+
     context = {
-        'categories': categories,
+        'expense_categories': expense_categories,
+        'expense_total': expense_total,
+        'earning_categories': earning_categories,
+        'earning_total': earning_total,
+        'total': earning_total - expense_total,
         'months': models.Month.objects.all(),
-        'current_month': current_month,
+        'active_month': month,
     }
     return render(request, 'occurrence/totals.html', context)
