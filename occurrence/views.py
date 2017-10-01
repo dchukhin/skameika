@@ -9,7 +9,7 @@ from . import forms, models
 
 
 def transactions(request, *args, **kwargs):
-    """Show all current Transactions."""
+    """Show all current transactions."""
     # Get the current_month, either from the request kwargs, or use the today's month
     if request.GET.get('month'):
         current_month = get_object_or_404(
@@ -23,21 +23,31 @@ def transactions(request, *args, **kwargs):
             name=date.today().strftime('%B, %Y'),
         )[0]
     expense_transactions = models.ExpenseTransaction.objects.filter(month=current_month)
+    earning_transactions = models.EarningTransaction.objects.filter(month=current_month)
 
     context = {
-        'transactions': expense_transactions,
-        'form': forms.ExpenseTransactionForm(),
+        'expense_transactions': expense_transactions,
+        'earning_transactions': earning_transactions,
+        'expense_form': forms.ExpenseTransactionForm(),
+        'earning_form': forms.EarningTransactionForm(),
         'current_month': current_month,
         'months': models.Month.objects.all(),
     }
     if request.method == 'POST':
-        # If this is a POST and the form is valid, then save the form
-        form = forms.ExpenseTransactionForm(request.POST)
+        # Is this for an expense, or an earning?
+        if request.POST.get('form_type') == 'expense':
+            # Use the ExpenseTransactionForm for expense POSTs
+            form = forms.ExpenseTransactionForm(request.POST)
+        elif request.POST.get('form_type') == 'earning':
+            # Use the EarningTransactionForm for earning POSTs
+            form = forms.EarningTransactionForm(request.POST)
+
+        # If the form is valid, then save the form
         if form.is_valid():
             form.save()
         else:
             # The form is not valid, so return the invalid form to the template
-            context['form'] = form
+            context['expense_form'] = form
     return render(request, 'occurrence/transactions.html', context)
 
 

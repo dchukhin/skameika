@@ -3,14 +3,15 @@
 
 {% block content %}
 
-<h2>New Transaction</h2>
+<h2>New Expense Transaction</h2>
 <form action="" method="POST" class="form">
   {% csrf_token %}
-  {{ form.as_p }}
+  <input type='hidden' name='form_type' value='expense'></input>
+  {{ expense_form.as_p }}
   <button type="submit" class="btn btn-primary">Submit</button>
 </form>
 
-<h2>Current Transactions</h2>
+<h2>Current Expense Transactions</h2>
 <table class="table">
   <thead>
     <tr>
@@ -23,7 +24,7 @@
     </tr>
   </thead>
   <tbody>
-    {% for transaction in transactions %}
+    {% for transaction in expense_transactions %}
       <tr>
         <td>{{ transaction.date }}</td>
         <td>{{ transaction.title }}</td>
@@ -36,6 +37,39 @@
   </tbody>
 </table>
 
+<h2>New Earning Transaction</h2>
+<form action="" method="POST" class="form">
+  {% csrf_token %}
+  <input type='hidden' name='form_type' value='earning'></input>
+  {{ earning_form.as_p }}
+  <button type="submit" class="btn btn-primary">Submit</button>
+</form>
+
+<h2>Current Earning Transactions</h2>
+<table class="table">
+  <thead>
+    <tr>
+      <th>Date</th>
+      <th>Title</th>
+      <th>Amount</th>
+      <th>Category</th>
+      <th>Description</th>
+      <th>Receipt</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for transaction in earning_transactions %}
+      <tr>
+        <td>{{ transaction.date }}</td>
+        <td>{{ transaction.title }}</td>
+        <td>{{ transaction.amount }}</td>
+        <td>{{ transaction.category }}</td>
+        <td>{{ transaction.description }}</td>
+        <td>{% if transaction.receipt %}<a href="{{ transaction.receipt.url }}">receipt</a>{% endif %}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
 
 <nav>
   <ul class="pagination">
