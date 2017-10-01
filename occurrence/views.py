@@ -22,17 +22,17 @@ def transactions(request, *args, **kwargs):
             month=date.today().month,
             name=date.today().strftime('%B, %Y'),
         )[0]
-    transactions = models.Transaction.objects.filter(month=current_month)
+    expense_transactions = models.ExpenseTransaction.objects.filter(month=current_month)
 
     context = {
-        'transactions': transactions,
-        'form': forms.TransactionForm(),
+        'transactions': expense_transactions,
+        'form': forms.ExpenseTransactionForm(),
         'current_month': current_month,
         'months': models.Month.objects.all(),
     }
     if request.method == 'POST':
         # If this is a POST and the form is valid, then save the form
-        form = forms.TransactionForm(request.POST)
+        form = forms.ExpenseTransactionForm(request.POST)
         if form.is_valid():
             form.save()
         else:
@@ -42,7 +42,7 @@ def transactions(request, *args, **kwargs):
 
 
 def totals(request, *args, **kwargs):
-    """Show totals (for Transactions) by category."""
+    """Show totals (for transactions) by category."""
     month_slug = request.GET.get('month')
     # If the user did not provide a month_slug, then redirect to the totals
     # for the current month
@@ -58,8 +58,8 @@ def totals(request, *args, **kwargs):
 
     current_month = get_object_or_404(models.Month.objects.all(), slug=month_slug)
     month = get_object_or_404(models.Month.objects.all(), slug=month_slug)
-    categories = models.Category.objects.filter(transaction__month=month).annotate(
-        total=Sum('transaction__amount')
+    categories = models.Category.objects.filter(expensetransaction__month=month).annotate(
+        total=Sum('expensetransaction__amount')
     )
     context = {
         'categories': categories,

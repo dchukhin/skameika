@@ -44,8 +44,8 @@ class Month(models.Model):
         ordering = ('-year', '-month', )
 
 
-class Transaction(models.Model):
-    """Model for tracking transactions that occur."""
+class TransactionBase(models.Model):
+    """An abstract base model for Transaction-like models."""
     title = models.CharField(max_length=255)
     slug = models.SlugField(unique=True)
     date = models.DateField(default=date.today)
@@ -55,21 +55,28 @@ class Transaction(models.Model):
         help_text="The month that this Transaction occurred in.",
         on_delete=models.PROTECT  # Don't allow a Month to be deleted if it has Transactions
     )
-    category = models.ForeignKey(
-        Category,
-        limit_choices_to={'type_cat': Category.TYPE_EXPENSE}
-    )
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.CharField(max_length=255, blank=True)
     receipt = models.ImageField(upload_to='transaction_receipts/', blank=True)
-    pending = models.BooleanField(default=False)
 
     def __str__(self):
-        """Return the title and date of the Transaction, in the settings.TIME_ZONE."""
+        """Return the title and date of the Transaction."""
         return '{} - {}'.format(
             self.title,
             self.date.strftime('%Y-%m-%d')
         )
+
+    class Meta:
+        abstract = True
+
+
+class ExpenseTransaction(TransactionBase):
+    """Model for tracking (expense) transactions that occur."""
+    category = models.ForeignKey(
+        Category,
+        limit_choices_to={'type_cat': Category.TYPE_EXPENSE}
+    )
+    pending = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs):
         """Make sure the slug field is unique, and associate with a Month."""

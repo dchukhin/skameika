@@ -49,8 +49,8 @@ class TestTotalsView(TestCase):
 
         with self.subTest('Transactions in 1 Category'):
             category1 = factories.CategoryFactory()
-            t1 = factories.TransactionFactory(date=date.today(), category=category1)
-            t2 = factories.TransactionFactory(date=date.today(), category=category1)
+            t1 = factories.ExpenseTransactionFactory(date=date.today(), category=category1)
+            t2 = factories.ExpenseTransactionFactory(date=date.today(), category=category1)
             exp_total_category1 = t1.amount + t2.amount
             # A month Transactions in 1 Category has 1 category row
             response = self.client.get(self.url_current_month)
@@ -65,7 +65,7 @@ class TestTotalsView(TestCase):
 
         with self.subTest('Transactions in 1 Category'):
             category2 = factories.CategoryFactory()
-            t3 = factories.TransactionFactory(date=date.today(), category=category2)
+            t3 = factories.ExpenseTransactionFactory(date=date.today(), category=category2)
             exp_total_category1 = t1.amount + t2.amount
             exp_total_category2 = t3.amount
 

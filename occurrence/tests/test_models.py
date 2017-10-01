@@ -23,7 +23,7 @@ class TestMonth(TestCase):
 class TestTransaction(TestCase):
     def test_str(self):
         """Smoke test for string representation."""
-        transaction = factories.TransactionFactory()
+        transaction = factories.ExpenseTransactionFactory()
         self.assertEqual(
             str(transaction),
             '{} - {}'.format(
@@ -36,21 +36,21 @@ class TestTransaction(TestCase):
         """Saving a Transaction gives it a unique slug."""
         with self.subTest('First Transaction'):
             # Currently, there are no Transactions
-            self.assertEqual(models.Transaction.objects.count(), 0)
-            transaction1 = factories.TransactionFactory()
+            self.assertEqual(models.ExpenseTransaction.objects.count(), 0)
+            transaction1 = factories.ExpenseTransactionFactory()
             # Now there is 1 Transaction
-            self.assertEqual(models.Transaction.objects.count(), 1)
+            self.assertEqual(models.ExpenseTransaction.objects.count(), 1)
 
         with self.subTest('Second Transaction with same slug'):
-            transaction2 = factories.TransactionFactory(slug=transaction1.slug)
+            transaction2 = factories.ExpenseTransactionFactory(slug=transaction1.slug)
             # Now there are 2 Transactions, and their slugs are unique
-            self.assertEqual(models.Transaction.objects.count(), 2)
+            self.assertEqual(models.ExpenseTransaction.objects.count(), 2)
             self.assertNotEqual(transaction2.slug, transaction1.slug)
 
         with self.subTest('Third Transaction with same slug'):
-            transaction3 = factories.TransactionFactory(slug=transaction1.slug)
+            transaction3 = factories.ExpenseTransactionFactory(slug=transaction1.slug)
             # Now there are 3 Transactions, and their slugs are unique
-            self.assertEqual(models.Transaction.objects.count(), 3)
+            self.assertEqual(models.ExpenseTransaction.objects.count(), 3)
             self.assertNotEqual(transaction3.slug, transaction1.slug)
 
 
@@ -58,7 +58,7 @@ class TestTransaction(TestCase):
         """Saving a Transaction without a Month associates it with correct Month."""
         with self.subTest('new Transaction with no associated month; no Month object'):
             test_date = date(year=2017, month=5, day=1)
-            transaction1 = factories.TransactionFactory(date=test_date, month=None)
+            transaction1 = factories.ExpenseTransactionFactory(date=test_date, month=None)
             # The transaction1 now has the correct month
             self.assertEqual(transaction1.month.name, test_date.strftime('%B, %Y'))
             may_2017_month = transaction1.month
@@ -66,12 +66,12 @@ class TestTransaction(TestCase):
         with self.subTest('new Transaction with no associated month; Month object exists'):
             # Now the Month for the test_date exists (may_2017_month). The next
             # Transaction in May, 2017 should be associated with it
-            transaction2 = factories.TransactionFactory(date=test_date, month=None)
+            transaction2 = factories.ExpenseTransactionFactory(date=test_date, month=None)
             # The transaction2 now has the correct month
             self.assertEqual(transaction2.month, may_2017_month)
 
         with self.subTest('new Transaction with associated month'):
-            transaction3 = factories.TransactionFactory(date=test_date, month=may_2017_month)
+            transaction3 = factories.ExpenseTransactionFactory(date=test_date, month=may_2017_month)
             # The transaction3 is still associated with may_2017_month
             self.assertEqual(transaction3.month, may_2017_month)
 

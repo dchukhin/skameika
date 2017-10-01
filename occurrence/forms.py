@@ -3,8 +3,8 @@ from django import forms
 from . import models
 
 
-class TransactionForm(forms.ModelForm):
+class ExpenseTransactionForm(forms.ModelForm):
 
     class Meta:
-        model = models.Transaction
+        model = models.ExpenseTransaction
         exclude = ['slug', 'month']

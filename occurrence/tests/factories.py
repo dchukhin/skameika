@@ -35,7 +35,7 @@ class MonthFactory(factory.django.DjangoModelFactory):
         model = 'occurrence.Month'
 
 
-class TransactionFactory(factory.django.DjangoModelFactory):
+class ExpenseTransactionFactory(factory.django.DjangoModelFactory):
     title = factory.fuzzy.FuzzyText()
     slug = factory.LazyAttribute(lambda o: slugify(o.title))
     date = factory.fuzzy.FuzzyDate(
@@ -46,4 +46,4 @@ class TransactionFactory(factory.django.DjangoModelFactory):
     description = factory.fuzzy.FuzzyText()
 
     class Meta:
-        model = 'occurrence.Transaction'
+        model = 'occurrence.ExpenseTransaction'

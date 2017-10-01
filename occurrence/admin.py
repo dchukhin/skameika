@@ -14,6 +14,6 @@ class MonthAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('name', )}
 
 
-@admin.register(models.Transaction)
-class TransactionAdmin(admin.ModelAdmin):
+@admin.register(models.ExpenseTransaction)
+class ExpenseTransactionAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('title', )}
