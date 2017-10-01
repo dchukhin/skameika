@@ -6,6 +6,8 @@ import factory.fuzzy
 
 from django.utils.text import slugify
 
+from .. import models
+
 
 class CategoryFactory(factory.django.DjangoModelFactory):
     name = factory.fuzzy.FuzzyText()
@@ -13,6 +15,14 @@ class CategoryFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'occurrence.Category'
+
+
+class IncomeCategoryFactory(CategoryFactory):
+    cat_type = models.Category.TYPE_INCOME
+
+
+class ExpenseCategoryFactory(CategoryFactory):
+    cat_type = models.Category.TYPE_EXPENSE
 
 
 class MonthFactory(factory.django.DjangoModelFactory):

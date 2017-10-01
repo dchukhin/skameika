@@ -5,8 +5,16 @@ from django.utils.text import slugify
 
 
 class Category(models.Model):
+    TYPE_INCOME = 'income'
+    TYPE_EXPENSE = 'expense'
+    TYPE_CHOICES = (
+        (TYPE_INCOME, 'Income'),
+        (TYPE_EXPENSE, 'Expense'),
+    )
+
     name = models.CharField(max_length=255, unique=True)
     slug = models.SlugField(unique=True)
+    type_cat = models.CharField(max_length=20, choices=TYPE_CHOICES, default=TYPE_EXPENSE)
 
     def __str__(self):
         return self.name
