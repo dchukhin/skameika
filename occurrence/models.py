@@ -55,7 +55,10 @@ class Transaction(models.Model):
         help_text="The month that this Transaction occurred in.",
         on_delete=models.PROTECT  # Don't allow a Month to be deleted if it has Transactions
     )
-    category = models.ForeignKey(Category)
+    category = models.ForeignKey(
+        Category,
+        limit_choices_to={'type_cat': Category.TYPE_EXPENSE}
+    )
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.CharField(max_length=255, blank=True)
     receipt = models.ImageField(upload_to='transaction_receipts/', blank=True)
