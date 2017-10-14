@@ -12,6 +12,16 @@ class TestCategory(TestCase):
         category = factories.CategoryFactory()
         self.assertEqual(str(category), category.name)
 
+    def test_default_type_cat(self):
+        """By default, a Category is an expense Category."""
+        category = factories.CategoryFactory()
+        self.assertEqual(category.type_cat, models.Category.TYPE_EXPENSE)
+
+    def test_default_total_type(self):
+        """By default a Cateogry has a total_type of TOTAL_TYPE_REGULAR."""
+        category = factories.CategoryFactory()
+        self.assertEqual(category.total_type, models.Category.TOTAL_TYPE_REGULAR)
+
 
 class TestMonth(TestCase):
     def test_str(self):

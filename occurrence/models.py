@@ -12,12 +12,25 @@ class Category(models.Model):
         (TYPE_EXPENSE, 'Expense'),
     )
 
+    # The different ways to have totals for Categories. Most Categories will use
+    # the regular type, but some will use a running type
+    TOTAL_TYPE_REGULAR = 'regular'
+    TOTAL_TYPE_RUNNING = 'running'
+    TOTAL_TYPE_CHOICES = (
+        (TOTAL_TYPE_REGULAR, 'Regular total'),
+        (TOTAL_TYPE_RUNNING, 'Running total'),
+    )
+
     name = models.CharField(max_length=255, unique=True)
     slug = models.SlugField(unique=True)
     type_cat = models.CharField(max_length=20, choices=TYPE_CHOICES, default=TYPE_EXPENSE)
-    running_total_category = models.BooleanField(
-        default=False,
-        help_text="Whether this category should have a running total, rather than a regular total."
+    total_type = models.CharField(
+        max_length=20,
+        choices=TOTAL_TYPE_CHOICES,
+        default=TOTAL_TYPE_REGULAR,
+        help_text='When finding totals for this Category, how should the totals '
+                  'be displayed? Some Categories may need to be excluded from '
+                  'the totals, and be displayed on their own page.',
     )
 
     def __str__(self):
