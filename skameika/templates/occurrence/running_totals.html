@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+
+{% block content %}
+
+{% for category in categories %}
+  <table class="table" id="name-{{ category.slug }}">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Name</th>
+        <th>Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td>Current total</td>
+          <td></td>
+          <td>{{ category.total }}</td>
+        </tr>
+      {% for transaction in category.expense_transactions.all %}
+        <tr>
+          <td>{{ transaction.date }}</td>
+          <td>{{ transaction.title }}</td>
+          <td>{{ transaction.running_total_amount }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  {{ category }}
+{% endfor %}
+</table>
+
+{% endblock content %}

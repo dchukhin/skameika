@@ -4,7 +4,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from . import factories
-
+from .. import models
 
 # class TestTransactionsView(TestCase):
 #     url_name = 'transactions'
@@ -88,3 +88,57 @@ class TestTotalsView(TestCase):
                     exp_total_category2
                 )
             )
+
+
+class TestRunningTotalCategoriesTestCase(TestCase):
+    url_name = 'running_totals'
+    template_name = "occurrence/running_totals.html"
+
+    def setUp(self):
+        super().setUp()
+        self.url = reverse(self.url_name)
+
+    def test_no_running_totals_categories(self):
+        """GET the running_totals view when there are no running totals Categories."""
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+
+    def test_some_running_totals_categories(self):
+        """GET the running_totals view when there are some running totals Categories."""
+        running_total_cat1 = factories.CategoryFactory(
+            total_type=models.Category.TOTAL_TYPE_RUNNING
+        )
+        running_total_cat2 = factories.CategoryFactory(
+            total_type=models.Category.TOTAL_TYPE_RUNNING
+        )
+        regular_total_cat = factories.CategoryFactory(
+            total_type=models.Category.TOTAL_TYPE_REGULAR
+        )
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        # Each of the running totals Categories are in the template
+        for category in [running_total_cat1, running_total_cat2]:
+            with self.subTest(category):
+                self.assertContains(response, "name-{}".format(category.slug))
+        # The regular total Category is not in the template
+        self.assertNotContains(response, "name-{}".format(regular_total_cat.slug))
+
+    def test_invalid_methods(self):
+        """Only GETting this endpoint is allowed."""
+        with self.subTest('using POST'):
+            response = self.client.post(self.url)
+            self.assertEqual(response.status_code, 405)
+
+        with self.subTest('using PUT'):
+            response = self.client.put(self.url)
+            self.assertEqual(response.status_code, 405)
+
+        with self.subTest('using PATCH'):
+            response = self.client.patch(self.url)
+            self.assertEqual(response.status_code, 405)
+
+        with self.subTest('using DELETE'):
+            response = self.client.delete(self.url)
+            self.assertEqual(response.status_code, 405)

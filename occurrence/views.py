@@ -1,9 +1,10 @@
 from datetime import date
 
-from django.db.models import Sum
+from django.db.models import DecimalField, F, Sum, Value
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.text import slugify
+from django.views.decorators.http import require_http_methods
 
 from . import forms, models
 
@@ -93,3 +94,32 @@ def totals(request, *args, **kwargs):
         'active_month': month,
     }
     return render(request, 'occurrence/totals.html', context)
+
+
+@require_http_methods(["GET"])
+def running_total_categories(request):
+    """The view for Categories that have a running total, rather than the regular total."""
+    categories = models.Category.objects.filter(
+        total_type=models.Category.TOTAL_TYPE_RUNNING
+    ).annotate(
+        total=Sum(
+            F('expensetransaction__amount') * Value('-1'),
+            output_field=DecimalField()
+        ),
+    )
+    # For each Category, attach a queryset of transactions whose amounts have
+    # been multiplied by -1
+    for category in categories:
+        category.expense_transactions = models.ExpenseTransaction.objects.filter(
+            category=category,
+        ).annotate(
+            running_total_amount=Sum(
+                F('amount') * Value('-1'),
+                output_field=DecimalField()
+            ),
+
+        )
+    context = {
+        'categories': categories
+    }
+    return render(request, 'occurrence/running_totals.html', context)
