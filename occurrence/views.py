@@ -6,7 +6,7 @@ from django.urls import reverse
 from django.utils.text import slugify
 from django.views.decorators.http import require_http_methods
 
-from . import forms, models
+from . import forms, models, utils
 
 
 def transactions(request, *args, **kwargs):
@@ -108,18 +108,11 @@ def running_total_categories(request):
             output_field=DecimalField()
         ),
     )
-    # For each Category, attach a queryset of transactions whose amounts have
-    # been multiplied by -1
+    # For each Category, attach a queryset of ExpenseTransactions that have a
+    # running_total_amount fiels
     for category in categories:
-        category.expense_transactions = models.ExpenseTransaction.objects.filter(
-            category=category,
-        ).annotate(
-            running_total_amount=Sum(
-                F('amount') * Value('-1'),
-                output_field=DecimalField()
-            ),
+        category.expense_transactions = utils.get_expensetransactions_running_totals(category)
 
-        )
     context = {
         'categories': categories
     }
