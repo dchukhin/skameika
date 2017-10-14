@@ -89,6 +89,24 @@ class TestTotalsView(TestCase):
                 )
             )
 
+    def test_invalid_methods(self):
+        """Only GETting this endpoint is allowed."""
+        with self.subTest('using POST'):
+            response = self.client.post(self.url)
+            self.assertEqual(response.status_code, 405)
+
+        with self.subTest('using PUT'):
+            response = self.client.put(self.url)
+            self.assertEqual(response.status_code, 405)
+
+        with self.subTest('using PATCH'):
+            response = self.client.patch(self.url)
+            self.assertEqual(response.status_code, 405)
+
+        with self.subTest('using DELETE'):
+            response = self.client.delete(self.url)
+            self.assertEqual(response.status_code, 405)
+
 
 class TestRunningTotalCategoriesTestCase(TestCase):
     url_name = 'running_totals'

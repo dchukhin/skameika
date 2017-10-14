@@ -52,6 +52,7 @@ def transactions(request, *args, **kwargs):
     return render(request, 'occurrence/transactions.html', context)
 
 
+@require_http_methods(["GET"])
 def totals(request, *args, **kwargs):
     """Show totals (for transactions) by category."""
     month_slug = request.GET.get('month')
