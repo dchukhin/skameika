@@ -85,27 +85,30 @@ class TransactionBase(models.Model):
 
     def save(self, *args, **kwargs):
         """Make sure the slug field is unique, and associate with a Month."""
-        # Create a potential_slug based on title and self.date (including year,
-        # month, day)
-        potential_slug = '{}-{}'.format(
-            slugify(self.title),
-            self.date.strftime('%Y-%m-%d')
-        )
-        # Does a Transaction with this slug already exist?
-        if self.__class__.objects.filter(slug=potential_slug).exists():
-            # Find all the slugs that are similar to this potential_slug
-            similar_slugs = self.__class__.objects.filter(
-                slug__icontains=potential_slug
-            ).values_list('slug')
-            potential_slug += '_2'
-            i = 2
-            # Continue to increase the number at the end of potential_slug until
-            # we get a unique slug
-            while potential_slug in similar_slugs:
-                potential_slug = potential_slug[0:-1] + str(i)
-                i += 1
-        # This is a unique slug, so set it to self.slug
-        self.slug = potential_slug
+        # If the current slug would interfere with other current slugs, then try
+        # to find a new one
+        if not self.slug or self.__class__.objects.filter(slug=self.slug).exists():
+            # Create a potential_slug based on title and self.date (including year,
+            # month, day)
+            potential_slug = '{}-{}'.format(
+                slugify(self.title),
+                self.date.strftime('%Y-%m-%d')
+            )
+            # Does a Transaction with this slug already exist?
+            if self.__class__.objects.filter(slug=potential_slug).exists():
+                # Find all the slugs that are similar to this potential_slug
+                similar_slugs = self.__class__.objects.filter(
+                    slug__icontains=potential_slug
+                ).values_list('slug')
+                potential_slug += '_2'
+                i = 2
+                # Continue to increase the number at the end of potential_slug until
+                # we get a unique slug
+                while potential_slug in similar_slugs:
+                    potential_slug = potential_slug[0:-1] + str(i)
+                    i += 1
+            # This is a unique slug, so set it to self.slug
+            self.slug = potential_slug
 
         # Try to find a Month for this Transaction's date
         try:
