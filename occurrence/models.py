@@ -15,6 +15,10 @@ class Category(models.Model):
     name = models.CharField(max_length=255, unique=True)
     slug = models.SlugField(unique=True)
     type_cat = models.CharField(max_length=20, choices=TYPE_CHOICES, default=TYPE_EXPENSE)
+    running_total_category = models.BooleanField(
+        default=False,
+        help_text="Whether this category should have a running total, rather than a regular total."
+    )
 
     def __str__(self):
         return self.name
