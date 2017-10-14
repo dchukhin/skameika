@@ -71,7 +71,8 @@ def totals(request, *args, **kwargs):
     # Calculate the expense totals for this month
     expense_categories = models.Category.objects.filter(
         type_cat=models.Category.TYPE_EXPENSE,
-        expensetransaction__month=month
+        total_type=models.Category.TOTAL_TYPE_REGULAR,
+        expensetransaction__month=month,
     ).annotate(
         total=Sum('expensetransaction__amount')
     )
