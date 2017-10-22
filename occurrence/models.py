@@ -23,6 +23,7 @@ class Category(models.Model):
 
     name = models.CharField(max_length=255, unique=True)
     slug = models.SlugField(unique=True)
+    order = models.PositiveSmallIntegerField(default=0)
     type_cat = models.CharField(max_length=20, choices=TYPE_CHOICES, default=TYPE_EXPENSE)
     total_type = models.CharField(
         max_length=20,
