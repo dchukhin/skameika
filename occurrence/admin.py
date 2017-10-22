@@ -7,6 +7,8 @@ from . import models
 @admin.register(models.Category)
 class CategoryAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('name', )}
+    list_display = ['name', 'type_cat', 'order']
+    list_editable = ['order']
 
 
 @admin.register(models.Month)
