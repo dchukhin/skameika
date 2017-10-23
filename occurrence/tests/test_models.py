@@ -22,6 +22,31 @@ class TestCategory(TestCase):
         category = factories.CategoryFactory()
         self.assertEqual(category.total_type, models.Category.TOTAL_TYPE_REGULAR)
 
+    def test_default_ordering(self):
+        """Default ordering is by order field, then by name field."""
+        cat_order_1_name_a2 = factories.CategoryFactory(order=1, name='a2')
+        cat_order_2_name_a1 = factories.CategoryFactory(order=2, name='a1')
+        cat_order_1_name_b2 = factories.CategoryFactory(order=1, name='b2')
+        cat_order_2_name_b1 = factories.CategoryFactory(order=2, name='b1')
+
+        with self.subTest('Categories with same order are ordered by name'):
+            qs = models.Category.objects.filter(
+                id__in=[cat_order_1_name_b2.id, cat_order_1_name_a2.id]
+            )
+            self.assertEqual(
+                set(qs.values_list('id', flat=True)),
+                set([cat_order_1_name_a2.id, cat_order_1_name_b2.id])
+            )
+
+        with self.subTest('all Categories'):
+            self.assertEqual(
+                set(models.Category.objects.all().values_list('id', flat=True)),
+                set(
+                    [cat_order_1_name_a2.id, cat_order_1_name_b2.id,
+                     cat_order_2_name_a1.id, cat_order_2_name_b1.id]
+                )
+            )
+
 
 class TestMonth(TestCase):
     def test_str(self):

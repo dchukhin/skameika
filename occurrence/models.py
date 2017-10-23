@@ -39,7 +39,7 @@ class Category(models.Model):
 
     class Meta:
         verbose_name_plural = 'Categories'
-        ordering = ('name', )
+        ordering = ('order', 'name', )
 
 
 class Month(models.Model):
