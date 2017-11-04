@@ -68,23 +68,17 @@ def totals(request, *args, **kwargs):
         return redirect('{}?month={}'.format(reverse('totals'), current_month.slug))
 
     month = get_object_or_404(models.Month.objects.all(), slug=month_slug)
-    # Calculate the expense totals for this month
-    expense_categories = models.Category.objects.filter(
+
+    # Get the expense totals for this month
+    expense_categories, expense_total = utils.get_transactions_regular_totals(
+        month,
         type_cat=models.Category.TYPE_EXPENSE,
-        total_type=models.Category.TOTAL_TYPE_REGULAR,
-        expensetransaction__month=month,
-    ).annotate(
-        total=Sum('expensetransaction__amount')
     )
-    expense_total = expense_categories.aggregate(grand_total=Sum('total'))['grand_total'] or 0
-    # Calculate the earning totals for this month
-    earning_categories = models.Category.objects.filter(
+    # Get the earning totals for this month
+    earning_categories, earning_total = utils.get_transactions_regular_totals(
+        month,
         type_cat=models.Category.TYPE_INCOME,
-        earningtransaction__month=month
-    ).annotate(
-        total=Sum('earningtransaction__amount')
     )
-    earning_total = earning_categories.aggregate(grand_total=Sum('total'))['grand_total'] or 0
 
     context = {
         'expense_categories': expense_categories,
