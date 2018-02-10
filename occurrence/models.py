@@ -88,7 +88,11 @@ class TransactionBase(models.Model):
         """Make sure the slug field is unique, and associate with a Month."""
         # If the current slug would interfere with other current slugs, then try
         # to find a new one
-        if not self.slug or self.__class__.objects.filter(slug=self.slug).exists():
+        if not self.slug or self.__class__.objects.exclude(
+            pk=self.pk
+        ).filter(
+            slug=self.slug
+        ).exists():
             # Create a potential_slug based on title and self.date (including year,
             # month, day)
             potential_slug = '{}-{}'.format(
