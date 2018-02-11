@@ -1,6 +1,7 @@
 from datetime import date
 
 from django.db.models import DecimalField, F, Sum, Value
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.text import slugify
@@ -112,3 +113,40 @@ def running_total_categories(request):
         'categories': categories
     }
     return render(request, 'occurrence/running_totals.html', context)
+
+
+@require_http_methods(["GET", "POST"])
+def edit_transaction(request, type_cat, id):
+    """Edit a transaction."""
+    # Attempt to find the transaction, based on the type_cat
+    if type_cat == models.Category.TYPE_EXPENSE:
+        transaction = get_object_or_404(
+            models.ExpenseTransaction.objects.all(),
+            pk=id
+        )
+    elif type_cat == models.Category.TYPE_INCOME:
+        transaction = get_object_or_404(
+            models.EarningTransaction.objects.all(),
+            pk=id
+        )
+    else:
+        raise Http404('Category type not recognized')
+
+    if request.method == "POST":
+        if type_cat == models.Category.TYPE_EXPENSE:
+            form = forms.ExpenseTransactionForm(request.POST, instance=transaction)
+        elif type_cat == models.Category.TYPE_INCOME:
+            form = forms.EarningTransactionForm(request.POST, instance=transaction)
+        # If the form is valid, save the object
+        if form.is_valid():
+            form.save()
+            # Redirect the user to the transactions view for the month that this
+            # transaction is in
+            return redirect('{}?month={}'.format(reverse('transactions'), transaction.month.name))
+    else:
+        if type_cat == models.Category.TYPE_EXPENSE:
+            form = forms.ExpenseTransactionForm(instance=transaction)
+        elif type_cat == models.Category.TYPE_INCOME:
+            form = forms.EarningTransactionForm(instance=transaction)
+    context = {'form': form, 'transaction': transaction, 'type_cat': type_cat}
+    return render(request, 'occurrence/edit_transaction.html', context)

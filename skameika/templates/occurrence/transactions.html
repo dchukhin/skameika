@@ -21,6 +21,7 @@
       <th>Category</th>
       <th>Description</th>
       <th>Receipt</th>
+      <th>Edit</th>
     </tr>
   </thead>
   <tbody>
@@ -32,6 +33,7 @@
         <td>{{ transaction.category }}</td>
         <td>{{ transaction.description }}</td>
         <td>{% if transaction.receipt %}<a href="{{ transaction.receipt.url }}">receipt</a>{% endif %}</td>
+        <td><a href="{% url "edit_transaction" transaction.category.type_cat transaction.pk %}">Edit</a></td>
       </tr>
     {% endfor %}
   </tbody>
@@ -55,6 +57,7 @@
       <th>Category</th>
       <th>Description</th>
       <th>Receipt</th>
+      <th>Edit</th>
     </tr>
   </thead>
   <tbody>
@@ -66,6 +69,7 @@
         <td>{{ transaction.category }}</td>
         <td>{{ transaction.description }}</td>
         <td>{% if transaction.receipt %}<a href="{{ transaction.receipt.url }}">receipt</a>{% endif %}</td>
+        <td><a href="{% url "edit_transaction" transaction.category.type_cat transaction.pk %}">Edit</a></td>
       </tr>
     {% endfor %}
   </tbody>
