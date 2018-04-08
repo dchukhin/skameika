@@ -25,6 +25,13 @@ class Category(models.Model):
     slug = models.SlugField(unique=True)
     order = models.PositiveSmallIntegerField(default=0)
     type_cat = models.CharField(max_length=20, choices=TYPE_CHOICES, default=TYPE_EXPENSE)
+    parent = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name="children",
+    )
     total_type = models.CharField(
         max_length=20,
         choices=TOTAL_TYPE_CHOICES,

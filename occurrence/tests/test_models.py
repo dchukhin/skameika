@@ -47,6 +47,20 @@ class TestCategory(TestCase):
                 )
             )
 
+    def test_parent_child_deletion(self):
+        """Deleting a parent or child Category does not CASCADE delete the parent or children."""
+        parent = factories.CategoryFactory()
+        child = factories.CategoryFactory(parent=parent)
+        grandchild = factories.CategoryFactory(parent=child)
+
+        # Delete the child, which should not delete either the parent or the
+        # grandchild
+        child.delete()
+
+        for category in [parent, grandchild]:
+            category.refresh_from_db()
+            self.assertIsNotNone(category.id, )
+
 
 class TestMonth(TestCase):
     def test_str(self):
