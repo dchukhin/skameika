@@ -5,28 +5,78 @@ from . import models
 
 
 def get_transactions_regular_totals(month=None, type_cat=models.Category.TYPE_EXPENSE):
-    """Get the totals for Categories."""
+    """Get the totals for Categories, including children Categories."""
     # Raise an error if type_cat is not valid
     if type_cat not in [name for (name, label) in models.Category.TYPE_CHOICES]:
         raise ValidationError("{} is not a valid type_cat".format(type_cat))
 
-    # Get all of the Categories of regular total_type
-    categories = models.Category.objects.filter(total_type=models.Category.TOTAL_TYPE_REGULAR)
-
-    # Filter categories by the month, and annotate the queryset with the total
     if type_cat == models.Category.TYPE_EXPENSE:
+        # Get all of the ExpenseTransactions with a Cateogry of regular total_type
+        transactions = models.ExpenseTransaction.objects.filter(
+            category__total_type=models.Category.TOTAL_TYPE_REGULAR
+        )
         if month:
-            categories = categories.filter(expensetransaction__month=month).distinct()
-        categories = categories.annotate(total=Sum('expensetransaction__amount'))
+            transactions = transactions.filter(month=month)
+        category_totals = transactions.values(
+            'category'
+        ).order_by().distinct().annotate(total=Sum('amount'))
+
+        sum_total = category_totals.aggregate(grand_total=Sum('total'))['grand_total'] or 0
+
     elif type_cat == models.Category.TYPE_INCOME:
+        # Get all of the EarningTransaction with a Cateogry of regular total_type
+        transactions = models.EarningTransaction.objects.filter(
+            category__total_type=models.Category.TOTAL_TYPE_REGULAR
+        )
         if month:
-            categories = categories.filter(earningtransaction__month=month).distinct()
-        categories = categories.annotate(total=Sum('earningtransaction__amount'))
+            transactions = transactions.filter(month=month)
+        category_totals = transactions.values('category').order_by().distinct().annotate(total=Sum('amount'))
 
-    # Aggregate to get the sum total for the transactions
-    sum_total = categories.aggregate(grand_total=Sum('total'))['grand_total'] or 0
+        sum_total = category_totals.aggregate(grand_total=Sum('total'))['grand_total'] or 0
 
-    return categories, sum_total
+    # A list of Categories, their totals, and their children (including
+    # their children's totals)
+    category_dict = {}
+    # Loop through the category_totals, and add categories to category_dict,
+    # as well as adding their parent Category (if applicable)
+    for category_data in category_totals.values(
+        'category__name', 'category__id', 'category__order', 'total',
+        'category__parent', 'category__parent__name'
+    ).order_by('category__order', 'category__name'):
+        if category_data['category__parent']:
+            parent_id = category_data['category__parent']
+            if parent_id in category_dict.keys():
+                # Add this total to the parent's total
+                category_dict[parent_id]["total"] += category_data['total']
+                # # Add this Category to the list of children, preserving the order
+                index = category_data['category__order']
+                category_dict[parent_id]["children"].insert(
+                    index,
+                    {"name": category_data['category__name'], "total": category_data['total']}
+                )
+            else:
+                category_dict[parent_id] = {
+                    "name": category_data['category__parent__name'],
+                    "total": category_data['total'],
+                    "children": [
+                        {
+                            "name": category_data['category__name'],
+                            "total": category_data['total']
+                        }
+                    ]
+                }
+        else:
+            # If this Category is already in the category_dict, then just add
+            # its amount to the total already there
+            if category_data['category__id'] in category_dict.keys():
+                category_dict[category_data['category__id']]['total'] += category_data['total']
+            else:
+                category_dict[category_data['category__id']] = {
+                    "name": category_data['category__name'],
+                    "total": category_data['total'], "children": []
+                }
+
+    return category_dict, sum_total
 
 
 def get_expensetransactions_running_totals(category):
