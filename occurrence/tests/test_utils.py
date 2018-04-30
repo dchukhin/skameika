@@ -95,32 +95,23 @@ class GetTransactionsRegularTotalsTestCase(TestCase):
     def test_no_transactions(self):
         """Get totals when there are no transactions."""
         with self.subTest('No transactions'):
-            # The expected results
-            expected_categories = []
-            expected_sum_total = 0
             # Get results
             results, total = utils.get_transactions_regular_totals(self.month)
             # Verify results
             self.assertEqual({}, results)
             self.assertEqual(0, total)
-            # self.assertTotals(expected_categories, expected_sum_total, categories, total)
 
         with self.subTest('Get expense totals with only EarningTransactions'):
             # Create some EarningTransactions
             earning_transs = [factories.EarningTransactionFactory() for i in range(0, 2)]
-            # The expected results
-            expected_categories = []
-            expected_sum_total = 0
             # Get results
             results, total = utils.get_transactions_regular_totals(
                 self.month,
                 type_cat=models.Category.TYPE_EXPENSE,
             )
-            # import ipdb; ipdb.set_trace()
             # Verify results
             self.assertEqual({}, results)
             self.assertEqual(0, total)
-            # self.assertTotals(expected_categories, expected_sum_total, categories, total)
 
         with self.subTest('Get earning totals with only expense transactions'):
             # Delete any EarningTransactions

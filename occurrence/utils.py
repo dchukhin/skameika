@@ -30,7 +30,9 @@ def get_transactions_regular_totals(month=None, type_cat=models.Category.TYPE_EX
         )
         if month:
             transactions = transactions.filter(month=month)
-        category_totals = transactions.values('category').order_by().distinct().annotate(total=Sum('amount'))
+        category_totals = transactions.values('category').order_by().distinct().annotate(
+            total=Sum('amount')
+        )
 
         sum_total = category_totals.aggregate(grand_total=Sum('total'))['grand_total'] or 0
 
