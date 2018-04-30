@@ -2,6 +2,7 @@ from datetime import date, datetime
 
 from django.test import TestCase
 from django.urls import reverse
+from django.utils.text import slugify
 
 from . import factories
 from .. import models
@@ -222,7 +223,7 @@ class TestEditTransactionTestCase(TestCase):
         """Make a valid POST to update a transaction."""
         new_amount = 50
         new_date = '2017-01-01'
-        new_date_month_for_url = 'January,%202017'
+        new_date_month_for_url = slugify('January, 2017')
         new_title = 'New Title'
         subtests = (
             ('ExpenseTransaction', self.transaction_expense, self.url_transaction_expense),
@@ -246,7 +247,6 @@ class TestEditTransactionTestCase(TestCase):
                     reverse('transactions'),
                     new_date_month_for_url
                 )
-                # import ipdb; ipdb.set_trace()
                 self.assertRedirects(response, expected_redirect_url)
                 # The transaction has been updated
                 transaction.refresh_from_db()

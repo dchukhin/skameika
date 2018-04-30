@@ -16,7 +16,7 @@ def transactions(request, *args, **kwargs):
     if request.GET.get('month'):
         current_month = get_object_or_404(
             models.Month.objects.all(),
-            name=request.GET.get('month')
+            slug=request.GET.get('month')
         )
     else:
         current_month = models.Month.objects.get_or_create(
@@ -142,7 +142,7 @@ def edit_transaction(request, type_cat, id):
             form.save()
             # Redirect the user to the transactions view for the month that this
             # transaction is in
-            return redirect('{}?month={}'.format(reverse('transactions'), transaction.month.name))
+            return redirect('{}?month={}'.format(reverse('transactions'), transaction.month.slug))
     else:
         if type_cat == models.Category.TYPE_EXPENSE:
             form = forms.ExpenseTransactionForm(instance=transaction)
