@@ -16,11 +16,23 @@
     </tr>
   </thead>
   <tbody>
-    {% for category in earning_categories %}
+    {% for category in earning_categories.values %}
       <tr class="category-row">
-        <td class="col-sm-8" id="name-{{ category.slug }}">{{ category.name }}</td>
-        <td id="total-{{ category.slug }}">{{ category.total }}</td>
+        <td class="col-sm-8" id="name-{{ category.name }}">{{ category.name }}</td>
+        <td id="total-{{ category.name }}">{{ category.total }}</td>
       </tr>
+      {% for child_category in category.children %}
+        <tr class="category-row">
+          <td class="col-sm-8" id="name-{{ child_category.name }}">
+              <span class="col-sm-1"></span>
+              {{ child_category.name }}
+          </td>
+          <td id="total-{{ child_category.name }}">
+            <span class="col-sm-1"></span>
+            {{ child_category.total }}
+          </td>
+        </tr>
+      {% endfor %}
     {% endfor %}
     <tr>
       <td class="col-sm-8">Total</td>
@@ -38,11 +50,23 @@
     </tr>
   </thead>
   <tbody>
-    {% for category in expense_categories %}
+    {% for category in expense_categories.values %}
       <tr class="category-row">
-        <td class="col-sm-8" id="name-{{ category.slug }}">{{ category.name }}</td>
-        <td id="total-{{ category.slug }}">{{ category.total }}</td>
+        <td class="col-sm-8" id="name-{{ category.name }}">{{ category.name }}</td>
+        <td id="total-{{ category.name }}">{{ category.total }}</td>
       </tr>
+      {% for child_category in category.children %}
+        <tr class="category-row">
+          <td class="col-sm-8" id="name-{{ child_category.name }}">
+              <span class="col-sm-1"></span>
+              {{ child_category.name }}
+          </td>
+          <td id="total-{{ child_category.name }}">
+            <span class="col-sm-1"></span>
+            {{ child_category.total }}
+          </td>
+        </tr>
+      {% endfor %}
     {% endfor %}
     <tr>
       <td class="col-sm-8">Total</td>
