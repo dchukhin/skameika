@@ -54,16 +54,16 @@ class TestTotalsView(TestCase):
             exp_total_category1 = t1.amount + t2.amount
             # A month Transactions in 1 Category has 1 category row
             response = self.client.get(self.url_current_month)
-            self.assertContains(response, "name-{}".format(category1.slug))
+            self.assertContains(response, "name-{}".format(category1.name))
             self.assertContains(
                 response,
                 '<td id="total-{}">{}</td>'.format(
-                    category1.slug,
+                    category1.name,
                     exp_total_category1
                 )
             )
 
-        with self.subTest('Transactions in 1 Category'):
+        with self.subTest('Transactions in multiple Categories'):
             category2 = factories.CategoryFactory()
             t3 = factories.ExpenseTransactionFactory(date=date.today(), category=category2)
             exp_total_category1 = t1.amount + t2.amount
@@ -71,23 +71,48 @@ class TestTotalsView(TestCase):
 
             response = self.client.get(self.url_current_month)
 
-            # A month Transactions in multiple Categories has 1 row for each Category
-            self.assertContains(response, "name-{}".format(category1.slug))
+            # Month Transactions in multiple Categories has 1 row for each Category
+            self.assertContains(response, "name-{}".format(category1.name))
             self.assertContains(
                 response,
                 '<td id="total-{}">{}</td>'.format(
-                    category1.slug,
+                    category1.name,
                     exp_total_category1
                 )
             )
-            self.assertContains(response, "name-{}".format(category2.slug))
+            self.assertContains(response, "name-{}".format(category2.name))
             self.assertContains(
                 response,
                 '<td id="total-{}">{}</td>'.format(
-                    category2.slug,
+                    category2.name,
                     exp_total_category2
                 )
             )
+
+        with self.subTest('Sub Category Transactions'):
+            # A parent Category, and a child Category
+            category3 = factories.CategoryFactory()
+            category3_subcategory = factories.CategoryFactory(parent=category3)
+            # A transaction in the child Category
+            t4 = factories.ExpenseTransactionFactory(
+                date=date.today(),
+                category=category3_subcategory
+            )
+            # The expected total for both the parent and child Category
+            exp_total = t4.amount
+
+            response = self.client.get(self.url_current_month)
+
+            for category in [category3, category3_subcategory]:
+                self.assertContains(response, "name-{}".format(category.name))
+            self.assertContains(
+                response,
+                '<td id="total-{}">{}</td>'.format(
+                    category3.name,
+                    exp_total
+                )
+            )
+            self.assertContains(response, '<td id="total-{}">'.format(category3.name))
 
     def test_invalid_methods(self):
         """Only GETting this endpoint is allowed."""

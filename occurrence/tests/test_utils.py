@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+from decimal import Decimal
 import random
 
 from django.core.exceptions import ValidationError
@@ -78,6 +79,7 @@ class GetTransactionsRegularTotalsTestCase(TestCase):
         self.month = factories.MonthFactory(year=2017, month=9, name='September, 2017')
         self.category_a = factories.CategoryFactory()
         self.category_b = factories.CategoryFactory()
+        self.DECIMAL_01 = Decimal(10)**(-2)
 
     def assertTotals(self, expected_categories, expected_sum_total, categories, sum_total):
         """Assert Categories and their totals."""
@@ -97,9 +99,11 @@ class GetTransactionsRegularTotalsTestCase(TestCase):
             expected_categories = []
             expected_sum_total = 0
             # Get results
-            categories, total = utils.get_transactions_regular_totals(self.month)
+            results, total = utils.get_transactions_regular_totals(self.month)
             # Verify results
-            self.assertTotals(expected_categories, expected_sum_total, categories, total)
+            self.assertEqual({}, results)
+            self.assertEqual(0, total)
+            # self.assertTotals(expected_categories, expected_sum_total, categories, total)
 
         with self.subTest('Get expense totals with only EarningTransactions'):
             # Create some EarningTransactions
@@ -108,30 +112,31 @@ class GetTransactionsRegularTotalsTestCase(TestCase):
             expected_categories = []
             expected_sum_total = 0
             # Get results
-            categories, total = utils.get_transactions_regular_totals(
+            results, total = utils.get_transactions_regular_totals(
                 self.month,
                 type_cat=models.Category.TYPE_EXPENSE,
             )
+            # import ipdb; ipdb.set_trace()
             # Verify results
-            self.assertTotals(expected_categories, expected_sum_total, categories, total)
+            self.assertEqual({}, results)
+            self.assertEqual(0, total)
+            # self.assertTotals(expected_categories, expected_sum_total, categories, total)
 
-        with self.subTest('Get income totals with only expense transactions'):
+        with self.subTest('Get earning totals with only expense transactions'):
             # Delete any EarningTransactions
             for earning_trans in earning_transs:
                 earning_trans.delete()
             # Create some ExpenseTransactions
             for i in range(0, 3):
                 factories.ExpenseTransactionFactory()
-            # The expected results
-            expected_categories = []
-            expected_sum_total = 0
             # Get results
-            categories, total = utils.get_transactions_regular_totals(
+            results, total = utils.get_transactions_regular_totals(
                 self.month,
                 type_cat=models.Category.TYPE_INCOME,
             )
             # Verify results
-            self.assertTotals(expected_categories, expected_sum_total, categories, total)
+            self.assertEqual({}, results)
+            self.assertEqual(0, total)
 
     def test_month_parameter(self):
         """Passing in a month parameter correctly filters by that Month's transactions."""
@@ -149,22 +154,41 @@ class GetTransactionsRegularTotalsTestCase(TestCase):
         )
 
         with self.subTest('No month parameter'):
-            # The expected results
-            expected_categories = [self.category_a, self.category_b]
+            # The expected results include both transactions
+            expected_results = {
+                trans_month.category.id: {
+                    "name": trans_month.category.name,
+                    "total": trans_month.amount,
+                    "children": []
+                },
+                trans_different_month.category.id: {
+                    "name": trans_different_month.category.name,
+                    "total": trans_different_month.amount,
+                    "children": []
+                },
+            }
             expected_sum_total = sum([trans_month.amount, trans_different_month.amount])
-            # The results include both transactions
-            categories, total = utils.get_transactions_regular_totals()
+            # Get the results
+            results, total = utils.get_transactions_regular_totals()
             # Verify results
-            self.assertTotals(expected_categories, expected_sum_total, categories, total)
+            self.assertEqual(expected_results, results)
+            self.assertEqual(expected_sum_total, total)
 
         with self.subTest('With month parameter'):
             # The expected results for the month of trans_month
-            expected_categories = [self.category_a]
+            expected_results = {
+                trans_month.category.id: {
+                    "name": trans_month.category.name,
+                    "total": trans_month.amount,
+                    "children": []
+                },
+            }
             expected_sum_total = trans_month.amount
-            # The results include both transactions
-            categories, total = utils.get_transactions_regular_totals(trans_month.month)
+            # Get the results
+            results, total = utils.get_transactions_regular_totals(trans_month.month)
             # Verify results
-            self.assertTotals(expected_categories, expected_sum_total, categories, total)
+            self.assertEqual(expected_results, results)
+            self.assertEqual(expected_sum_total, total)
 
         with self.subTest('Invalid month parameter'):
             # Passing an invalid month raises an error
@@ -186,43 +210,58 @@ class GetTransactionsRegularTotalsTestCase(TestCase):
 
         with self.subTest('No type_cat parameter'):
             # The default is to only return expense transactions
-            expected_categories = [trans_expense.category]
+            expected_results = {
+                trans_expense.category.id: {
+                    "name": trans_expense.category.name,
+                    "total": Decimal(trans_expense.amount).quantize(self.DECIMAL_01),
+                    "children": []
+                },
+            }
             expected_sum_total = trans_expense.amount
             # Get the results
-            categories, total = utils.get_transactions_regular_totals(self.month)
+            results, total = utils.get_transactions_regular_totals(self.month)
             # Verify results
-            self.assertTotals(expected_categories, expected_sum_total, categories, total)
+            self.assertEqual(expected_results, results)
+            self.assertEqual(expected_sum_total, total)
 
         with self.subTest('With type_cat parameter'):
             # Get only the expense transactions
-            expected_categories = [trans_expense.category]
-            expected_sum_total = trans_expense.amount
+
             # Get the results
-            categories, total = utils.get_transactions_regular_totals(
+            results, total = utils.get_transactions_regular_totals(
                 self.month,
                 type_cat=trans_expense.category.type_cat
             )
-            # Verify results
-            self.assertTotals(expected_categories, expected_sum_total, categories, total)
+            # Verify results. Expected categories and totals are the same as the
+            # previous subtest.
+            self.assertEqual(expected_results, results)
+            self.assertEqual(expected_sum_total, total)
 
             # Get only the earning transactions
-            expected_categories = [trans_earning.category]
+            expected_results = {
+                trans_earning.category.id: {
+                    "name": trans_earning.category.name,
+                    "total": Decimal(trans_earning.amount).quantize(self.DECIMAL_01),
+                    "children": []
+                },
+            }
             expected_sum_total = trans_earning.amount
             # Get the results
-            categories, total = utils.get_transactions_regular_totals(
+            results, total = utils.get_transactions_regular_totals(
                 self.month,
                 type_cat=trans_earning.category.type_cat
             )
             # Verify results
-            self.assertTotals(expected_categories, expected_sum_total, categories, total)
+            self.assertEqual(expected_results, results)
+            self.assertEqual(expected_sum_total, total)
 
         with self.subTest('Invalid type_cat parameter'):
             # Passing an invalid type_cat raises an error
             with self.assertRaises(ValidationError):
                 utils.get_transactions_regular_totals(type_cat='not a valid type_cat')
 
-    def test_correct_totals(self):
-        """Verify correct totals for transactions in Categories."""
+    def test_correct_totals_no_children(self):
+        """Verify correct totals for transactions in Categories, with no children."""
         trans_a1 = factories.ExpenseTransactionFactory(
             category=self.category_a,
             amount=10,
@@ -251,9 +290,126 @@ class GetTransactionsRegularTotalsTestCase(TestCase):
             date=date(year=self.month.year, month=self.month.month, day=random.randint(1, 28)),
         )
         # The expected results
-        expected_categories = [self.category_a, self.category_b]
+        expected_results = {
+            self.category_a.id: {
+                "name": self.category_a.name,
+                "total": Decimal(trans_a1.amount + trans_a2.amount).quantize(self.DECIMAL_01),
+                "children": []
+            },
+            self.category_b.id: {
+                "name": self.category_b.name,
+                "total": Decimal(trans_b1.amount).quantize(self.DECIMAL_01),
+                "children": []
+            },
+        }
         expected_sum_total = sum([trans_a1.amount, trans_a2.amount, trans_b1.amount])
         # Get results
-        categories, total = utils.get_transactions_regular_totals(self.month)
+        results, total = utils.get_transactions_regular_totals(self.month)
         # Verify results
-        self.assertTotals(expected_categories, expected_sum_total, categories, total)
+        self.assertEqual(expected_results, results)
+        self.assertEqual(expected_sum_total, total)
+
+    def test_correct_totals_with_children(self):
+        """Verify correct totals for transactions in Categories, with no children."""
+        # Create several more Categories, and set their order
+        category_a2 = factories.CategoryFactory(order=2)
+        category_a3 = factories.CategoryFactory(order=1)
+        self.category_a.order = 3
+        self.category_a.save()
+        # A parent Category for all a Categories
+        category_all_a_parent = factories.CategoryFactory()
+        for category in [self.category_a, category_a2, category_a3]:
+            category.parent = category_all_a_parent
+            category.save()
+
+        # ExpenseTransactions in the a Categories
+        trans_a = factories.ExpenseTransactionFactory(
+            category=self.category_a,
+            amount=10,
+            date=date(year=self.month.year, month=self.month.month, day=random.randint(1, 28)),
+        )
+        trans_a2 = factories.ExpenseTransactionFactory(
+            category=category_a2,
+            amount=20,
+            date=date(year=self.month.year, month=self.month.month, day=random.randint(1, 28)),
+        )
+        trans_a3 = factories.ExpenseTransactionFactory(
+            category=category_a3,
+            amount=30,
+            date=date(year=self.month.year, month=self.month.month, day=random.randint(1, 28)),
+        )
+        # The parent a Category has a transaction
+        trans_aparent = factories.ExpenseTransactionFactory(
+            category=category_all_a_parent,
+            amount=25,
+            date=date(year=self.month.year, month=self.month.month, day=random.randint(1, 28)),
+        )
+
+        # A parent Category for all b Categories
+        category_all_b_parent = factories.CategoryFactory()
+        self.category_b.parent = category_all_b_parent
+        self.category_b.save()
+
+        # ExpenseTransactions in the b Categories. The parent b Category does not
+        # have any transactions
+        trans_b = factories.ExpenseTransactionFactory(
+            category=self.category_b,
+            amount=80,
+            date=date(year=self.month.year, month=self.month.month, day=random.randint(1, 28)),
+        )
+
+        # A transaction from a different Month
+        factories.ExpenseTransactionFactory(
+            category=self.category_b,
+            amount=30,
+            date=date(year=self.month.year + 1, month=self.month.month, day=random.randint(1, 28)),
+        )
+        # A transaction of a different type
+        factories.EarningTransactionFactory(
+            category=self.category_b,
+            amount=40,
+            date=date(year=self.month.year, month=self.month.month, day=random.randint(1, 28)),
+        )
+
+        # The expected results
+        category_all_a_parent_total = Decimal(
+            sum([trans_aparent.amount, trans_a.amount, trans_a2.amount, trans_a3.amount])
+        ).quantize(self.DECIMAL_01)
+        category_all_b_parent_total = Decimal(trans_b.amount).quantize(self.DECIMAL_01)
+        expected_results = {
+            category_all_a_parent.id: {
+                "name": category_all_a_parent.name,
+                "total": category_all_a_parent_total,
+                "children": [
+                    {
+                        "name": category_a3.name,
+                        "total": Decimal(trans_a3.amount).quantize(self.DECIMAL_01),
+                    },
+                    {
+                        "name": category_a2.name,
+                        "total": Decimal(trans_a2.amount).quantize(self.DECIMAL_01),
+                    },
+                    {
+                        "name": self.category_a.name,
+                        "total": Decimal(trans_a.amount).quantize(self.DECIMAL_01),
+                    },
+                ]
+            },
+            category_all_b_parent.id: {
+                "name": category_all_b_parent.name,
+                "total": category_all_b_parent_total,
+                "children": [
+                    {
+                        "name": self.category_b.name,
+                        "total": Decimal(trans_b.amount).quantize(self.DECIMAL_01),
+                    },
+                ]
+            }
+        }
+        expected_sum_total = sum([category_all_a_parent_total, category_all_b_parent_total])
+
+        # Get results
+        results, total = utils.get_transactions_regular_totals(self.month)
+        # Verify results
+        self.assertEqual(results, expected_results)
+        self.assertEqual(expected_sum_total, total)
