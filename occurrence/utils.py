@@ -23,7 +23,7 @@ def get_transactions_regular_totals(month=None, type_cat=models.Category.TYPE_EX
 
         sum_total = category_totals.aggregate(grand_total=Sum('total'))['grand_total'] or 0
 
-    elif type_cat == models.Category.TYPE_INCOME:
+    elif type_cat == models.Category.TYPE_EARNING:
         # Get all of the EarningTransaction with a Cateogry of regular total_type
         transactions = models.EarningTransaction.objects.filter(
             category__total_type=models.Category.TOTAL_TYPE_REGULAR

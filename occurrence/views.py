@@ -78,7 +78,7 @@ def totals(request, *args, **kwargs):
     # Get the earning totals for this month
     earning_categories, earning_total = utils.get_transactions_regular_totals(
         month,
-        type_cat=models.Category.TYPE_INCOME,
+        type_cat=models.Category.TYPE_EARNING,
     )
 
     context = {
@@ -124,7 +124,7 @@ def edit_transaction(request, type_cat, id):
             models.ExpenseTransaction.objects.all(),
             pk=id
         )
-    elif type_cat == models.Category.TYPE_INCOME:
+    elif type_cat == models.Category.TYPE_EARNING:
         transaction = get_object_or_404(
             models.EarningTransaction.objects.all(),
             pk=id
@@ -135,7 +135,7 @@ def edit_transaction(request, type_cat, id):
     if request.method == "POST":
         if type_cat == models.Category.TYPE_EXPENSE:
             form = forms.ExpenseTransactionForm(request.POST, instance=transaction)
-        elif type_cat == models.Category.TYPE_INCOME:
+        elif type_cat == models.Category.TYPE_EARNING:
             form = forms.EarningTransactionForm(request.POST, instance=transaction)
         # If the form is valid, save the object
         if form.is_valid():
@@ -146,7 +146,7 @@ def edit_transaction(request, type_cat, id):
     else:
         if type_cat == models.Category.TYPE_EXPENSE:
             form = forms.ExpenseTransactionForm(instance=transaction)
-        elif type_cat == models.Category.TYPE_INCOME:
+        elif type_cat == models.Category.TYPE_EARNING:
             form = forms.EarningTransactionForm(instance=transaction)
     context = {'form': form, 'transaction': transaction, 'type_cat': type_cat}
     return render(request, 'occurrence/edit_transaction.html', context)

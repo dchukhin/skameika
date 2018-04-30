@@ -201,7 +201,7 @@ class TestEditTransactionTestCase(TestCase):
         )
         self.url_transaction_earning = reverse(
             self.url_name,
-            kwargs={'type_cat': models.Category.TYPE_INCOME, 'id': self.transaction_earning.pk}
+            kwargs={'type_cat': models.Category.TYPE_EARNING, 'id': self.transaction_earning.pk}
         )
 
     def test_get_page(self):
@@ -338,7 +338,7 @@ class TestEditTransactionTestCase(TestCase):
         url_transaction_earning = reverse(
             self.url_name,
             kwargs={
-                'type_cat': models.Category.TYPE_INCOME,
+                'type_cat': models.Category.TYPE_EARNING,
                 'id': self.transaction_earning.pk + 1000000
             }
         )

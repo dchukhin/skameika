@@ -27,7 +27,7 @@ class GetExpensetransactionsRunningTotalsTestCase(TestCase):
 
     def test_earning_transactions(self):
         """A Category that only has EarningTransactions."""
-        category = factories.CategoryFactory(type_cat=models.Category.TYPE_INCOME)
+        category = factories.CategoryFactory(type_cat=models.Category.TYPE_EARNING)
         for i in range(0, 3):
             factories.EarningTransactionFactory(category=category)
         results = utils.get_expensetransactions_running_totals(self.category)
@@ -123,7 +123,7 @@ class GetTransactionsRegularTotalsTestCase(TestCase):
             # Get results
             results, total = utils.get_transactions_regular_totals(
                 self.month,
-                type_cat=models.Category.TYPE_INCOME,
+                type_cat=models.Category.TYPE_EARNING,
             )
             # Verify results
             self.assertEqual({}, results)

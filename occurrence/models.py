@@ -5,10 +5,10 @@ from django.utils.text import slugify
 
 
 class Category(models.Model):
-    TYPE_INCOME = 'income'
+    TYPE_EARNING = 'income'
     TYPE_EXPENSE = 'expense'
     TYPE_CHOICES = (
-        (TYPE_INCOME, 'Income'),
+        (TYPE_EARNING, 'Income'),
         (TYPE_EXPENSE, 'Expense'),
     )
 
@@ -155,10 +155,10 @@ class ExpenseTransaction(TransactionBase):
 
 
 class EarningTransaction(TransactionBase):
-    """Model for tracking income transactions that occur."""
+    """Model for tracking earning transactions that occur."""
     category = models.ForeignKey(
         Category,
-        limit_choices_to={'type_cat': Category.TYPE_INCOME}
+        limit_choices_to={'type_cat': Category.TYPE_EARNING}
     )
 
     class Meta:

@@ -18,7 +18,7 @@ class CategoryFactory(factory.django.DjangoModelFactory):
 
 
 class IncomeCategoryFactory(CategoryFactory):
-    type_cat = models.Category.TYPE_INCOME
+    type_cat = models.Category.TYPE_EARNING
 
 
 class ExpenseCategoryFactory(CategoryFactory):
