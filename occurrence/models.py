@@ -189,3 +189,4 @@ class MonthlyStatistic(models.Model):
 
     class Meta:
         unique_together = (('statistic', 'month'),)
+        ordering = ['statistic__order']
