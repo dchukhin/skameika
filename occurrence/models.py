@@ -169,9 +169,13 @@ class Statistic(models.Model):
     """Model for tracking statistics."""
     name = models.CharField(max_length=255)
     slug = models.SlugField(unique=True)
+    order = models.PositiveSmallIntegerField(default=0)
 
     def __str__(self):
         return self.name
+
+    class Meta:
+        ordering = ['order']
 
 
 class MonthlyStatistic(models.Model):

@@ -30,6 +30,8 @@ class EarningTransactionAdmin(admin.ModelAdmin):
 @admin.register(models.Statistic)
 class StatisticAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('name', )}
+    list_display = ['name', 'order']
+    list_editable = ['order']
 
 
 @admin.register(models.MonthlyStatistic)
