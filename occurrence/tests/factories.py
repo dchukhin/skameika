@@ -65,6 +65,7 @@ class EarningTransactionFactory(factory.django.DjangoModelFactory):
 
 class StatisticFactory(factory.django.DjangoModelFactory):
     name = factory.fuzzy.FuzzyText()
+    slug = factory.LazyAttribute(lambda o: slugify(o.name))
 
     class Meta:
         model = 'occurrence.Statistic'
