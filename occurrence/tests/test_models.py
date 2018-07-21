@@ -1,5 +1,6 @@
 from datetime import date
 
+from django.db.utils import IntegrityError
 from django.test import TestCase
 
 from . import factories
@@ -169,3 +170,33 @@ class TestExpenseTransaction(TestCase, TransactionBaseMixin):
 class TestEarningTransaction(TestCase, TransactionBaseMixin):
     model_class = models.EarningTransaction
     factory = factories.EarningTransactionFactory
+
+
+class TestStatistic(TestCase):
+    def test_str(self):
+        """Smoke test for string representation."""
+        statistic = factories.StatisticFactory()
+        self.assertEqual(str(statistic), statistic.name)
+
+
+class TestMonthlyStatistic(TestCase):
+    def test_str(self):
+        """Smoke test for string representation."""
+        monthly_statistic = factories.MonthlyStatisticFactory()
+        self.assertEqual(
+            str(monthly_statistic),
+            '{} for {}'.format(monthly_statistic.statistic, monthly_statistic.month)
+        )
+
+    def test_unique_together(self):
+        """A MonthlyStatistic's Statistic and Month are unique_together."""
+        statistic_1 = factories.StatisticFactory(name='Statistic One')
+        month_1 = factories.MonthFactory()
+
+        # Create a MonthlyStatistic for statistic_1 and month_1
+        factories.MonthlyStatisticFactory(statistic=statistic_1, month=month_1)
+
+        # Attempting to create another MonthlyStatistic for statistic_1 and
+        # month_1 raises an error
+        with self.assertRaises(IntegrityError):
+            factories.MonthlyStatisticFactory(statistic=statistic_1, month=month_1)

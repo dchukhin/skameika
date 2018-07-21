@@ -25,3 +25,16 @@ class ExpenseTransactionAdmin(admin.ModelAdmin):
 @admin.register(models.EarningTransaction)
 class EarningTransactionAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('title', )}
+
+
+@admin.register(models.Statistic)
+class StatisticAdmin(admin.ModelAdmin):
+    prepopulated_fields = {'slug': ('name', )}
+    list_display = ['name', 'order']
+    list_editable = ['order']
+
+
+@admin.register(models.MonthlyStatistic)
+class MonthlyStatisticAdmin(admin.ModelAdmin):
+    list_display = ['statistic', 'month', 'amount']
+    list_filter = ['statistic', 'month']
