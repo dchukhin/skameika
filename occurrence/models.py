@@ -163,3 +163,22 @@ class EarningTransaction(TransactionBase):
 
     class Meta:
         ordering = ('-date', )
+
+
+class Statistic(models.Model):
+    """Model for tracking statistics."""
+    name = models.CharField(max_length=255)
+    slug = models.SlugField(unique=True)
+
+    def __str__(self):
+        return self.name
+
+
+class MonthlyStatistic(models.Model):
+    """Through model between Statistic and Month."""
+    statistic = models.ForeignKey(Statistic, on_delete=models.CASCADE)
+    month = models.ForeignKey(Month, on_delete=models.CASCADE)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return '{} for {}'.format(self.statistic, self.month)
