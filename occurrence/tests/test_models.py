@@ -169,3 +169,20 @@ class TestExpenseTransaction(TestCase, TransactionBaseMixin):
 class TestEarningTransaction(TestCase, TransactionBaseMixin):
     model_class = models.EarningTransaction
     factory = factories.EarningTransactionFactory
+
+
+class TestStatistic(TestCase):
+    def test_str(self):
+        """Smoke test for string representation."""
+        statistic = factories.StatisticFactory()
+        self.assertEqual(str(statistic), statistic.name)
+
+
+class TestMonthlyStatistic(TestCase):
+    def test_str(self):
+        """Smoke test for string representation."""
+        monthly_statistic = factories.MonthlyStatisticFactory()
+        self.assertEqual(
+            str(monthly_statistic),
+            '{} for {}'.format(monthly_statistic.statistic, monthly_statistic.month)
+        )

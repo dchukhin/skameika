@@ -61,3 +61,19 @@ class EarningTransactionFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'occurrence.EarningTransaction'
+
+
+class StatisticFactory(factory.django.DjangoModelFactory):
+    name = factory.fuzzy.FuzzyText()
+
+    class Meta:
+        model = 'occurrence.Statistic'
+
+
+class MonthlyStatisticFactory(factory.django.DjangoModelFactory):
+    statistic = factory.SubFactory(StatisticFactory)
+    month = factory.SubFactory(MonthFactory)
+    amount = factory.fuzzy.FuzzyDecimal(low=0, high=100000)
+
+    class Meta:
+        model = 'occurrence.MonthlyStatistic'
