@@ -182,3 +182,6 @@ class MonthlyStatistic(models.Model):
 
     def __str__(self):
         return '{} for {}'.format(self.statistic, self.month)
+
+    class Meta:
+        unique_together = (('statistic', 'month'),)
