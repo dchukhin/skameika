@@ -115,6 +115,20 @@ class TestTotalsView(TestCase):
             )
             self.assertContains(response, '<td id="total-{}">'.format(category3.name))
 
+    def test_statistics(self):
+        """GETting the endpoint returns statistics for the month."""
+        # A MonthlyStatistic for the current Month
+        monthly_statistic_current1 = factories.MonthlyStatisticFactory(month=self.current_month)
+        # A MonthlyStatistic for the wrong Month
+        factories.MonthlyStatisticFactory()
+
+        response = self.client.get(self.url_current_month)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            set(response.context['monthly_statistics']),
+            set([monthly_statistic_current1])
+        )
+
     def test_invalid_methods(self):
         """Only GETting this endpoint is allowed."""
         with self.subTest('using POST'):

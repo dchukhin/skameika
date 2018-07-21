@@ -81,12 +81,16 @@ def totals(request, *args, **kwargs):
         type_cat=models.Category.TYPE_EARNING,
     )
 
+    # Get the MonthlyStatistic for this Month
+    monthly_statistics = models.MonthlyStatistic.objects.filter(month=month)
+
     context = {
         'expense_categories': expense_categories,
         'expense_total': expense_total,
         'earning_categories': earning_categories,
         'earning_total': earning_total,
         'total': earning_total - expense_total,
+        'monthly_statistics': monthly_statistics,
         'months': models.Month.objects.all(),
         'active_month': month,
     }

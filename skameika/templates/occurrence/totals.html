@@ -99,4 +99,31 @@
   </ul>
 </nav>
 
+
+<h3>Statistics</h3>
+<table class="table">
+  <tbody>
+    {% for monthly_statistic in monthly_statistics %}
+      <tr>
+        <td class="col-sm-8">{{ monthly_statistic.statistic }}</td>
+        <td>{{ monthly_statistic.amount }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+
+<nav>
+  <ul class="pagination">
+    {% for month in months %}
+      <li class="{% if active_month == month %}active{% endif %}">
+        <a href="{% url "totals" %}?month={{ month.slug }}">
+          {{ month }}
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+</nav>
+
+
 {% endblock content %}
