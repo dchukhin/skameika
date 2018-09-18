@@ -20,11 +20,17 @@ class MonthAdmin(admin.ModelAdmin):
 @admin.register(models.ExpenseTransaction)
 class ExpenseTransactionAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('title', )}
+    list_filter = ('category', 'month', )
+    search_fields = ('title', 'category__name', )
+    list_display = ('title', 'amount', 'date', 'month', )
 
 
 @admin.register(models.EarningTransaction)
 class EarningTransactionAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('title', )}
+    list_filter = ('category', 'month', )
+    search_fields = ('title', 'category__name', )
+    list_display = ('title', 'amount', 'date', 'month', )
 
 
 @admin.register(models.Statistic)
