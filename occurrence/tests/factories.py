@@ -78,3 +78,12 @@ class MonthlyStatisticFactory(factory.django.DjangoModelFactory):
 
     class Meta:
         model = 'occurrence.MonthlyStatistic'
+
+
+class ExpectedMonthlyCategoryTotalFactory(factory.django.DjangoModelFactory):
+    category = factory.SubFactory(CategoryFactory)
+    month = factory.SubFactory(MonthFactory)
+    amount = factory.fuzzy.FuzzyDecimal(low=0, high=100000)
+
+    class Meta:
+        model = 'occurrence.ExpectedMonthlyCategoryTotal'
