@@ -44,3 +44,9 @@ class StatisticAdmin(admin.ModelAdmin):
 class MonthlyStatisticAdmin(admin.ModelAdmin):
     list_display = ['statistic', 'month', 'amount']
     list_filter = ['statistic', 'month']
+
+
+@admin.register(models.ExpectedMonthlyCategoryTotal)
+class ExpectedMonthlyCategoryTotalAdmin(admin.ModelAdmin):
+    list_display = ['category', 'month', 'amount']
+    list_filter = ['month', 'category']

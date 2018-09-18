@@ -190,3 +190,17 @@ class MonthlyStatistic(models.Model):
     class Meta:
         unique_together = (('statistic', 'month'),)
         ordering = ['statistic__order']
+
+
+class ExpectedMonthlyCategoryTotal(models.Model):
+    """Through model between Category and Month."""
+    category = models.ForeignKey(Category, on_delete=models.CASCADE)
+    month = models.ForeignKey(Month, on_delete=models.CASCADE)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return 'Expected amount for {} in {}'.format(self.category, self.month)
+
+    class Meta:
+        unique_together = (('category', 'month'),)
+        ordering = ['category__order']
