@@ -151,7 +151,7 @@ class ExpenseTransaction(TransactionBase):
     pending = models.BooleanField(default=False)
 
     class Meta:
-        ordering = ('-date', )
+        ordering = ('-date', 'title', 'amount', )
 
 
 class EarningTransaction(TransactionBase):
@@ -162,7 +162,7 @@ class EarningTransaction(TransactionBase):
     )
 
     class Meta:
-        ordering = ('-date', )
+        ordering = ('-date', 'title', 'amount', )
 
 
 class Statistic(models.Model):
