@@ -4,11 +4,11 @@ Django settings for Heroku deploy of skameika project.
 
 import os
 
+SECRET_KEY = os.environ.get('SECRET_KEY', 'CHANGEME!')
+DEBUG = False
+
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
 PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, os.pardir))
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
@@ -203,6 +203,3 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
 CSRF_COOKIE_HTTPONLY = True
 X_FRAME_OPTIONS = 'DENY'
-
-SECRET_KEY = os.environ.get('SECRET_KEY', 'CHANGEME!')
-DEBUG = False
