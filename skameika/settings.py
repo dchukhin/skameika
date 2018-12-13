@@ -2,6 +2,7 @@
 Django settings for Heroku deploy of skameika project.
 """
 
+import django_heroku
 import os
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'CHANGEME!')
@@ -205,5 +206,4 @@ CSRF_COOKIE_HTTPONLY = True
 X_FRAME_OPTIONS = 'DENY'
 
 # Configure Django App for Heroku.
-import django_heroku
 django_heroku.settings(locals())
