@@ -3,6 +3,7 @@ Django settings for Heroku deploy of skameika project.
 """
 
 import django_heroku
+import dj_database_url
 import os
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'CHANGEME!')
@@ -75,17 +76,24 @@ WSGI_APPLICATION = 'skameika.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/1.9/ref/settings/#databases
+DATABASES = {'default': dj_database_url.config()}
+DATABASES['default']['ENGINE'] = 'django.db.backends.postgresql_psycopg2'
+# DATABASES['default']['NAME'] = 'skameika'
+# DATABASES['default']['USER'] = 'skameika_%s' % ENVIRONMENT.lower()
+# DATABASES['default']['HOST'] = os.environ.get('DB_HOST', '')
+# DATABASES['default']['PORT'] = os.environ.get('DB_PORT', '')
+# DATABASES['default']['PASSWORD'] = os.environ.get('DB_PASSWORD', '')
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'skameika',
-        'USER': '',
-        'PASSWORD': '',
-        'HOST': '',
-        'PORT': '',
-    }
-}
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
+#         'NAME': 'skameika',
+#         'USER': '',
+#         'PASSWORD': '',
+#         'HOST': '',
+#         'PORT': '',
+#     }
+# }
 
 # Absolute filesystem path to the directory that will hold user-uploaded files.
 # Example: "/home/media/media.lawrence.com/media/"
