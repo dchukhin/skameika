@@ -1,1 +1,1 @@
-web: gunicorn skameika.wsgi:application
+web: gunicorn skameika.wsgi
