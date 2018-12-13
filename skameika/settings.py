@@ -203,3 +203,7 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
 CSRF_COOKIE_HTTPONLY = True
 X_FRAME_OPTIONS = 'DENY'
+
+# Configure Django App for Heroku.
+import django_heroku
+django_heroku.settings(locals())
