@@ -78,6 +78,7 @@ WSGI_APPLICATION = 'skameika.wsgi.application'
 # https://docs.djangoproject.com/en/1.9/ref/settings/#databases
 # DATABASES = {'default': dj_database_url.config()}
 # DATABASES['default']['ENGINE'] = 'django.db.backends.postgresql_psycopg2'
+DATABASES = {}
 DATABASES['default'] = dj_database_url.config(conn_max_age=600, ssl_require=True)
 # DATABASES['default']['NAME'] = 'skameika'
 # DATABASES['default']['USER'] = 'skameika_%s' % ENVIRONMENT.lower()
