@@ -146,6 +146,7 @@ class ExpenseTransaction(TransactionBase):
     """Model for tracking (expense) transactions that occur."""
     category = models.ForeignKey(
         Category,
+        on_delete=models.CASCADE,
         limit_choices_to={'type_cat': Category.TYPE_EXPENSE}
     )
     pending = models.BooleanField(default=False)
@@ -158,6 +159,7 @@ class EarningTransaction(TransactionBase):
     """Model for tracking earning transactions that occur."""
     category = models.ForeignKey(
         Category,
+        on_delete=models.CASCADE,
         limit_choices_to={'type_cat': Category.TYPE_EARNING}
     )
 
