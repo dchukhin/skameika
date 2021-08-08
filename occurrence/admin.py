@@ -22,7 +22,7 @@ class ExpenseTransactionAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('title', )}
     list_filter = ('category', 'month', )
     search_fields = ('title', 'category__name', )
-    list_display = ('title', 'amount', 'date', 'month', )
+    list_display = ('id', 'date', 'amount', 'title', 'description')
 
 
 @admin.register(models.EarningTransaction)
@@ -30,7 +30,7 @@ class EarningTransactionAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('title', )}
     list_filter = ('category', 'month', )
     search_fields = ('title', 'category__name', )
-    list_display = ('title', 'amount', 'date', 'month', )
+    list_display = ('id', 'title', 'amount', 'date', 'month', 'description')
 
 
 @admin.register(models.Statistic)
