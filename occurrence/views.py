@@ -24,8 +24,8 @@ def transactions(request, *args, **kwargs):
             month=date.today().month,
             name=date.today().strftime('%B, %Y'),
         )[0]
-    expense_transactions = models.ExpenseTransaction.objects.filter(month=current_month)
-    earning_transactions = models.EarningTransaction.objects.filter(month=current_month)
+    expense_transactions = models.ExpenseTransaction.objects.filter(month=current_month).select_related('category')
+    earning_transactions = models.EarningTransaction.objects.filter(month=current_month).select_related('category')
 
     context = {
         'expense_transactions': expense_transactions,
