@@ -7,9 +7,42 @@
 <form action="" method="POST" class="form">
   {% csrf_token %}
   <input type='hidden' name='form_type' value='expense'></input>
-  {{ expense_form.as_p }}
+  <p>
+    {{ expense_form.title.label }}
+    <input type="text" name="title" maxlength="255" required="" id="id_title" list="expense-choices">
+  </p>
+  <p>
+    {{ expense_form.date.label }}
+    {{ expense_form.date }}
+  </p>
+  <p>
+    {{ expense_form.amount.label }}
+    {{ expense_form.amount }}
+  </p>
+  <p>
+    {{ expense_form.description.label }}
+    {{ expense_form.description }}
+  </p>
+  <p>
+    {{ expense_form.receipt.label }}
+    {{ expense_form.receipt }}
+  </p>
+  <p>
+    {{ expense_form.category.label }}
+    {{ expense_form.category }}
+  </p>
+  <p>
+    {{ expense_form.pending.label }}
+    {{ expense_form.pending }}
+  </p>
   <button type="submit" class="btn btn-primary">Submit</button>
 </form>
+
+<datalist id="expense-choices">
+  {% for choice in expense_transaction_choices %}
+    <option value="{{ choice }}">
+  {% endfor %}
+</datalist>
 
 <h2>Current Expense Transactions</h2>
 <table class="table">
