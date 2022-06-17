@@ -29,6 +29,9 @@ def transactions(request, *args, **kwargs):
     expense_transaction_titles = models.ExpenseTransaction.objects.order_by(
         'title'
     ).values_list("title", flat=True).distinct('title')
+    earning_transaction_titles = models.EarningTransaction.objects.order_by(
+        'title'
+    ).values_list("title", flat=True).distinct('title')
 
     context = {
         'expense_transactions': expense_transactions,
@@ -38,6 +41,7 @@ def transactions(request, *args, **kwargs):
         'current_month': current_month,
         'months': models.Month.objects.all(),
         'expense_transaction_choices': expense_transaction_titles,
+        'earning_transaction_choices': earning_transaction_titles,
     }
     if request.method == 'POST':
         # Is this for an expense, or an earning?

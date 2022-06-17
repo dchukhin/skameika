@@ -76,9 +76,37 @@
 <form action="" method="POST" class="form">
   {% csrf_token %}
   <input type='hidden' name='form_type' value='earning'></input>
-  {{ earning_form.as_p }}
+  <p>
+    {{ earning_form.title.label }}
+    <input type="text" name="title" maxlength="255" required="" id="id_title" list="earning-choices">
+  </p>
+  <p>
+    {{ earning_form.date.label }}
+    {{ earning_form.date }}
+  </p>
+  <p>
+    {{ earning_form.amount.label }}
+    {{ earning_form.amount }}
+  </p>
+  <p>
+    {{ earning_form.description.label }}
+    {{ earning_form.description }}
+  </p>
+  <p>
+    {{ earning_form.receipt.label }}
+    {{ earning_form.receipt }}
+  </p>
+  <p>
+    {{ earning_form.category.label }}
+    {{ earning_form.category }}
+  </p>
   <button type="submit" class="btn btn-primary">Submit</button>
 </form>
+<datalist id="earning-choices">
+  {% for choice in earning_transaction_choices %}
+    <option value="{{ choice }}">
+  {% endfor %}
+</datalist>
 
 <h2>Current Earning Transactions</h2>
 <table class="table">
