@@ -1,5 +1,6 @@
 from django.core.exceptions import ValidationError
 from django.db.models import DecimalField, F, Sum, Value
+from django.utils.text import slugify
 
 from . import models
 
@@ -102,3 +103,18 @@ def get_expensetransactions_running_totals(category):
             output_field=DecimalField()
         ),
     )
+
+
+def get_or_create_month_for_date_obj(date_obj):
+    """Get or create a Month object for a date object."""
+    try:
+        month = models.Month.objects.get(month=date_obj.month, year=date_obj.year)
+    except models.Month.DoesNotExist:
+        # A Month for this Transaction's date does not exist, so create one
+        month = models.Month.objects.create(
+            month=date_obj.month,
+            year=date_obj.year,
+            name=date_obj.strftime('%B, %Y'),
+            slug=slugify(date_obj.strftime('%B, %Y')),
+        )
+    return month

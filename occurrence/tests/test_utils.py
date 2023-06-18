@@ -404,3 +404,30 @@ class GetTransactionsRegularTotalsTestCase(TestCase):
         # Verify results
         self.assertEqual(results, expected_results)
         self.assertEqual(expected_sum_total, total)
+
+
+class GetOrCreateMonthForDateObjTestCase(TestCase):
+    """Test case for the get_or_create_month_for_date_obj() function."""
+    def test_month_exists(self):
+        """If a Month for the date already exists, then it is returned."""
+        month = factories.MonthFactory(year=2017, month=9, name='September, 2017')
+        date_obj = date(year=month.year, month=month.month, day=1)
+        # Get the Month.
+        returned_month = utils.get_or_create_month_for_date_obj(date_obj)
+        # Assert that the returned_month matches what was expected.
+        self.assertEqual(returned_month, returned_month)
+
+    def test_month_does_not_exist(self):
+        """If a Month for the date does not exist, then a new Month is created."""
+        date_obj = date(year=2018, month=1, day=2)
+        # Get the Month.
+        returned_month = utils.get_or_create_month_for_date_obj(date_obj)
+        # Assert that the returned_month matches what was expected.
+        self.assertEqual(returned_month.year, date_obj.year)
+        self.assertEqual(returned_month.month, date_obj.month)
+
+    def test_invalid_date_obj(self):
+        """Test passing invalid date_obj values."""
+        for invalid_value in ["2020-01-01", "", None, [], {"something": "something else"}]:
+            with self.assertRaises(AttributeError):
+                utils.get_or_create_month_for_date_obj(invalid_value)
