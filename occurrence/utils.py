@@ -1,3 +1,5 @@
+import uuid
+
 from django.core.exceptions import ValidationError
 from django.db.models import DecimalField, F, Sum, Value
 from django.utils.text import slugify
@@ -118,3 +120,12 @@ def get_or_create_month_for_date_obj(date_obj):
             slug=slugify(date_obj.strftime('%B, %Y')),
         )
     return month
+
+
+def create_unique_slug_for_transaction(transaction):
+    # Create a slug based on title, date, and some random characters.
+    return '{}-{}-{}'.format(
+        slugify(transaction.title),
+        transaction.date.strftime('%Y-%m-%d'),
+        str(uuid.uuid4()).replace('-', '')[0: 10],
+    )
