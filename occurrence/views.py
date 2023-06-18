@@ -1,9 +1,11 @@
 from datetime import date
 
+from django.contrib import messages
 from django.db.models import DecimalField, F, Sum, Value
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.dateparse import parse_date
 from django.utils.text import slugify
 from django.views.decorators.http import require_http_methods
 
@@ -42,6 +44,8 @@ def transactions(request, *args, **kwargs):
         'months': models.Month.objects.all(),
         'expense_transaction_choices': expense_transaction_titles,
         'earning_transaction_choices': earning_transaction_titles,
+        'expense_transaction_constant': models.Category.TYPE_EXPENSE,
+        'earning_transaction_constant': models.Category.TYPE_EARNING,
     }
     if request.method == 'POST':
         # Is this for an expense, or an earning?
@@ -162,3 +166,80 @@ def edit_transaction(request, type_cat, id):
             form = forms.EarningTransactionForm(instance=transaction)
     context = {'form': form, 'transaction': transaction, 'type_cat': type_cat}
     return render(request, 'occurrence/edit_transaction.html', context)
+
+
+@require_http_methods(["GET", "POST"])
+def copy_transactions(request):
+    """Copy transactions to a new date."""
+    # Get the parameters from the request.
+    if request.method == "GET":
+        request_data = request.GET
+    elif request.method == "POST":
+        request_data = request.POST
+    transaction_type = request_data.get("transaction_type", "")
+    request_transaction_ids = request_data.getlist("selected_transactions", [])
+
+    selected_transaction_ids = []
+    try:
+        for id in request_transaction_ids:
+            selected_transaction_ids.append(int(id))
+    except (ValueError, TypeError):
+        context = {'errors': ["The selected transaction ids must be integers."]}
+        return render(request, 'occurrence/copy_transactions.html', context)
+
+    if transaction_type == models.Category.TYPE_EXPENSE:
+        transactions = models.ExpenseTransaction.objects.filter(id__in=selected_transaction_ids)
+    elif transaction_type == models.Category.TYPE_EARNING:
+        transactions = models.EarningTransaction.objects.filter(id__in=selected_transaction_ids)
+    else:
+        error = (
+            f"You must choose a valid transaction_type (either '{models.Category.TYPE_EXPENSE}' "
+            f"or '{models.Category.TYPE_EARNING}')."
+        )
+        context = {'errors': [error]}
+        return render(request, 'occurrence/copy_transactions.html', context)
+
+    if len(request_transaction_ids) != transactions.count():
+        error = "One or more of the selected transactions does not exist."
+        context = {'errors': [error]}
+        return render(request, 'occurrence/copy_transactions.html', context)
+
+    if request.method == "GET":
+        # For GET requests, render a page with the relevant transaction data.
+        context = {'transactions': transactions, 'transaction_type': transaction_type, 'errors': []}
+        return render(request, 'occurrence/copy_transactions.html', context)
+    else:
+        # For POST requests, create new transactions, based on the chosen transactions' data.
+        new_date = request.POST.get("date")
+        if new_date:
+            new_date_obj = parse_date(new_date)
+        if not new_date_obj:
+            error = f"You must choose a date in the appropriate format. '{new_date}' is not valid."
+            context = {'errors': [error]}
+            return render(request, 'occurrence/copy_transactions.html', context)
+
+        # Determine the Month for the selected date.
+        month = utils.get_or_create_month_for_date_obj(new_date_obj)
+
+        # Create new transactions, based on the chosen transactions' data.
+        if transaction_type == models.Category.TYPE_EXPENSE:
+            TransactionModel = models.ExpenseTransaction
+        elif transaction_type == models.Category.TYPE_EARNING:
+            TransactionModel = models.EarningTransaction
+        new_transactions = []
+        for transaction in transactions:
+            new_transactions.append(
+                TransactionModel(
+                    category=transaction.category,
+                    title=transaction.title,
+                    slug=utils.create_unique_slug_for_transaction(transaction),
+                    date=new_date_obj,
+                    amount=transaction.amount,
+                    month=month,
+                    description=transaction.description,
+                )
+            )
+        num_transactions_created = TransactionModel.objects.bulk_create(new_transactions)
+
+        messages.success(request, f"{len(num_transactions_created)} transaction(s) copied.")
+        return redirect('transactions')

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+
+{% block content %}
+{% if errors %}
+  {{ errors }}
+{% endif %}
+<h2>Copying the following transactions:</h2>
+<form method="POST" action="{% url 'copy_transactions' %}">
+  <input type='hidden' name="transaction_type" value="{{ transaction_type }}">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Title</th>
+        <th>Amount</th>
+        <th>Category</th>
+        <th>Description</th>
+        <th>Receipt</th>
+        <th>Edit</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for transaction in transactions %}
+        <input type='hidden' name='selected_transactions' value='{{ transaction.id }}'></input>
+        <tr>
+          <td>{{ transaction.date }}</td>
+          <td>{{ transaction.title }}</td>
+          <td>{{ transaction.amount }}</td>
+          <td>{{ transaction.category }}</td>
+          <td>{{ transaction.description }}</td>
+          <td>{% if transaction.receipt %}<a href="{{ transaction.receipt.url }}">receipt</a>{% endif %}</td>
+          <td><a href="{% url "edit_transaction" transaction.category.type_cat transaction.pk %}">Edit</a></td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <label for="id_date">Please choose a date.</label>
+  {% csrf_token %}
+  <input type="date" name="date" required id="id_date">
+  <input type="submit" value="Submit">
+</form>
+{% endblock content %}
