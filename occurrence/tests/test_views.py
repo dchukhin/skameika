@@ -1,5 +1,6 @@
 from datetime import date, datetime
 
+from django.forms.models import model_to_dict
 from django.test import TestCase
 from django.urls import reverse
 from django.utils.text import slugify
@@ -436,6 +437,24 @@ class TestCopyTransactionsTestCase(TestCase):
         self.transaction_earning2 = factories.EarningTransactionFactory()
         self.transaction_earning3 = factories.EarningTransactionFactory()
 
+    def assert_transactions_have_same_data(self, transaction1, transaction2):
+        """
+        Assert that two transactions have the same data.
+
+        Note: we specifically use model_to_dict(), to make sure that any future field
+        additions to the transaction model get checked in this test class.
+        """
+        data_transaction1 = model_to_dict(transaction1)
+        data_transaction2 = model_to_dict(transaction2)
+
+        for field_name, field_value in data_transaction1.items():
+            if field_name not in ["id", "slug", "date", "month"]:
+                self.assertEqual(
+                    data_transaction2[field_name],
+                    field_value,
+                    f"field '{field_name}' does not match"
+                )
+
     def test_get_page(self):
         """GET the page to copy transactions."""
         with self.subTest('ExpenseTransaction'):
@@ -520,8 +539,25 @@ class TestCopyTransactionsTestCase(TestCase):
             response = self.client.get(url)
             self.assertEqual(response.status_code, 200)
             self.assertTemplateUsed(response, self.template_name)
-            self.assertEqual(response.context['errors'], [])
-            self.assertEqual([t for t in response.context['transactions']], [])
+            self.assertEqual(
+                response.context["errors"],
+                ["One or more of the selected transactions does not exist."]
+            )
+
+        with self.subTest('an existent and a non-existent selected_transactions'):
+            url = reverse(self.url_name) + (
+                f"?transaction_type={models.Category.TYPE_EXPENSE}"
+                # an ExpenseTransaction with this id does not exist
+                f"&selected_transactions={self.transaction_expense1.id}"
+                "&selected_transactions=1000000000000000"
+            )
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 200)
+            self.assertTemplateUsed(response, self.template_name)
+            self.assertEqual(
+                response.context["errors"],
+                ["One or more of the selected transactions does not exist."]
+            )
 
     def test_post_valid(self):
         """Make a valid POST to copy transactions."""
@@ -569,6 +605,19 @@ class TestCopyTransactionsTestCase(TestCase):
                 1,
             )
 
+            # Make sure that the new transactions have the same data as the transactions
+            # that they copied.
+            new_transaction1 = models.ExpenseTransaction.objects.get(
+                date=new_date_str,
+                title=self.transaction_expense1.title
+            )
+            new_transaction2 = models.ExpenseTransaction.objects.get(
+                date=new_date_str,
+                title=self.transaction_expense2.title
+            )
+            self.assert_transactions_have_same_data(self.transaction_expense1, new_transaction1)
+            self.assert_transactions_have_same_data(self.transaction_expense2, new_transaction2)
+
         with self.subTest('EarningTransactions'):
             data["transaction_type"] = models.Category.TYPE_EARNING
             data["selected_transactions"] = [self.transaction_earning1.id]
@@ -604,6 +653,13 @@ class TestCopyTransactionsTestCase(TestCase):
                 ).count(),
                 1,
             )
+            # Make sure that the new transactions have the same data as the transactions
+            # that they copied.
+            new_transaction1 = models.EarningTransaction.objects.get(
+                date=new_date_str,
+                title=self.transaction_earning1.title
+            )
+            self.assert_transactions_have_same_data(self.transaction_earning1, new_transaction1)
 
     def test_post_invalid(self):
         """Make an invalid POST to copy transactions."""
@@ -677,6 +733,22 @@ class TestCopyTransactionsTestCase(TestCase):
         with self.subTest('non-existent selected_transactions'):
             data["transaction_type"] = models.Category.TYPE_EARNING
             data["selected_transactions"] = [1000000000000000]
+
+            response = self.client.post(reverse(self.url_name), data)
+
+            self.assertEqual(response.status_code, 200)
+            self.assertTemplateUsed(response, self.template_name)
+            self.assertEqual(
+                response.context['errors'],
+                ["One or more of the selected transactions does not exist."],
+            )
+            # No transactions were created.
+            self.assertEqual(models.ExpenseTransaction.objects.count(), count_expense_transactions)
+            self.assertEqual(models.EarningTransaction.objects.count(), count_expense_transactions)
+
+        with self.subTest('an existent and a non-existent selected_transactions'):
+            data["transaction_type"] = models.Category.TYPE_EARNING
+            data["selected_transactions"] = [self.transaction_expense1.id, 1000000000000000]
 
             response = self.client.post(reverse(self.url_name), data)
 
