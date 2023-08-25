@@ -45,32 +45,38 @@
 </datalist>
 
 <h2>Current Expense Transactions</h2>
-<table class="table">
-  <thead>
-    <tr>
-      <th>Date</th>
-      <th>Title</th>
-      <th>Amount</th>
-      <th>Category</th>
-      <th>Description</th>
-      <th>Receipt</th>
-      <th>Edit</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for transaction in expense_transactions %}
+<form method="GET" action="{% url 'copy_transactions' %}">
+  <input type='hidden' name="transaction_type" value="{{ expense_transaction_constant }}">
+  <input type="submit" value="Copy selected transactions" class="btn btn-primary">
+  <table class="table">
+    <thead>
       <tr>
-        <td>{{ transaction.date }}</td>
-        <td>{{ transaction.title }}</td>
-        <td>{{ transaction.amount }}</td>
-        <td>{{ transaction.category }}</td>
-        <td>{{ transaction.description }}</td>
-        <td>{% if transaction.receipt %}<a href="{{ transaction.receipt.url }}">receipt</a>{% endif %}</td>
-        <td><a href="{% url "edit_transaction" transaction.category.type_cat transaction.pk %}">Edit</a></td>
+        <th>Select</th>
+        <th>Date</th>
+        <th>Title</th>
+        <th>Amount</th>
+        <th>Category</th>
+        <th>Description</th>
+        <th>Receipt</th>
+        <th>Edit</th>
       </tr>
-    {% endfor %}
-  </tbody>
-</table>
+    </thead>
+    <tbody>
+      {% for transaction in expense_transactions %}
+        <tr>
+          <td><input id="{{ transaction.id }}" name="selected_transactions" type="checkbox" value="{{ transaction.id }}"></td>
+          <td>{{ transaction.date }}</td>
+          <td>{{ transaction.title }}</td>
+          <td>{{ transaction.amount }}</td>
+          <td>{{ transaction.category }}</td>
+          <td>{{ transaction.description }}</td>
+          <td>{% if transaction.receipt %}<a href="{{ transaction.receipt.url }}">receipt</a>{% endif %}</td>
+          <td><a href="{% url "edit_transaction" transaction.category.type_cat transaction.pk %}">Edit</a></td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</form>
 
 <h2>New Earning Transaction</h2>
 <form action="" method="POST" class="form">
@@ -109,32 +115,38 @@
 </datalist>
 
 <h2>Current Earning Transactions</h2>
-<table class="table">
-  <thead>
-    <tr>
-      <th>Date</th>
-      <th>Title</th>
-      <th>Amount</th>
-      <th>Category</th>
-      <th>Description</th>
-      <th>Receipt</th>
-      <th>Edit</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for transaction in earning_transactions %}
+<form method="GET" action="{% url 'copy_transactions' %}">
+  <input type='hidden' name="transaction_type" value="{{ earning_transaction_constant }}">
+  <input type="submit" value="Copy selected transactions" class="btn btn-primary">
+  <table class="table">
+    <thead>
       <tr>
-        <td>{{ transaction.date }}</td>
-        <td>{{ transaction.title }}</td>
-        <td>{{ transaction.amount }}</td>
-        <td>{{ transaction.category }}</td>
-        <td>{{ transaction.description }}</td>
-        <td>{% if transaction.receipt %}<a href="{{ transaction.receipt.url }}">receipt</a>{% endif %}</td>
-        <td><a href="{% url "edit_transaction" transaction.category.type_cat transaction.pk %}">Edit</a></td>
+        <th>Select</th>
+        <th>Date</th>
+        <th>Title</th>
+        <th>Amount</th>
+        <th>Category</th>
+        <th>Description</th>
+        <th>Receipt</th>
+        <th>Edit</th>
       </tr>
-    {% endfor %}
-  </tbody>
-</table>
+    </thead>
+    <tbody>
+      {% for transaction in earning_transactions %}
+        <tr>
+          <td><input id="{{ transaction.id }}" name="selected_transactions" type="checkbox" value="{{ transaction.id }}"></td>
+          <td>{{ transaction.date }}</td>
+          <td>{{ transaction.title }}</td>
+          <td>{{ transaction.amount }}</td>
+          <td>{{ transaction.category }}</td>
+          <td>{{ transaction.description }}</td>
+          <td>{% if transaction.receipt %}<a href="{{ transaction.receipt.url }}">receipt</a>{% endif %}</td>
+          <td><a href="{% url "edit_transaction" transaction.category.type_cat transaction.pk %}">Edit</a></td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</form>
 
 <nav>
   <ul class="pagination">

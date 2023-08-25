@@ -404,3 +404,101 @@ class GetTransactionsRegularTotalsTestCase(TestCase):
         # Verify results
         self.assertEqual(results, expected_results)
         self.assertEqual(expected_sum_total, total)
+
+
+class GetOrCreateMonthForDateObjTestCase(TestCase):
+    """Test case for the get_or_create_month_for_date_obj() function."""
+    def test_month_exists(self):
+        """If a Month for the date already exists, then it is returned."""
+        month = factories.MonthFactory(year=2017, month=9, name='September, 2017')
+        date_obj = date(year=month.year, month=month.month, day=1)
+        # Get the Month.
+        returned_month = utils.get_or_create_month_for_date_obj(date_obj)
+        # Assert that the returned_month matches what was expected.
+        self.assertEqual(returned_month, returned_month)
+
+    def test_month_does_not_exist(self):
+        """If a Month for the date does not exist, then a new Month is created."""
+        date_obj = date(year=2018, month=1, day=2)
+        # Get the Month.
+        returned_month = utils.get_or_create_month_for_date_obj(date_obj)
+        # Assert that the returned_month matches what was expected.
+        self.assertEqual(returned_month.year, date_obj.year)
+        self.assertEqual(returned_month.month, date_obj.month)
+
+    def test_invalid_date_obj(self):
+        """Test passing invalid date_obj values."""
+        for invalid_value in ["2020-01-01", "", None, [], {"something": "something else"}]:
+            with self.assertRaises(AttributeError):
+                utils.get_or_create_month_for_date_obj(invalid_value)
+
+
+class CreateUniqueSlugTestCase(TestCase):
+    """Test case for the create_unique_slug() function."""
+    def test_expense_transactions(self):
+        """Test the create_unique_slug() function for ExpenseTransactions."""
+        category = factories.CategoryFactory(
+            type_cat=models.Category.TYPE_EXPENSE,
+            total_type=models.Category.TOTAL_TYPE_REGULAR,
+        )
+        # Create an ExpenseTransaction.
+        expense_transaction1 = factories.ExpenseTransactionFactory.build(
+            title="Important Transaction",
+            category=category,
+        )
+        # Create a unique slug for the ExpenseTransaction.
+        new_slug1 = utils.create_unique_slug_for_transaction(expense_transaction1)
+        # Save the ExpenseTransaction.
+        expense_transaction1.slug = new_slug1
+        expense_transaction1.save()
+
+        # Create another ExpenseTransaction.
+        expense_transaction2 = factories.ExpenseTransactionFactory.build(
+            title="Important Transaction",
+            category=category,
+        )
+        # Create a unique slug for the ExpenseTransaction.
+        new_slug2 = utils.create_unique_slug_for_transaction(expense_transaction2)
+        # Save the ExpenseTransaction.
+        expense_transaction2.slug = new_slug2
+        expense_transaction2.save()
+
+        # Assert that the new_slug1 and new_slug2 are not the same.
+        self.assertNotEqual(new_slug1, new_slug2)
+
+    def test_earning_transactions(self):
+        """Test the create_unique_slug() function for EarningTransactions."""
+        category = factories.CategoryFactory(
+            type_cat=models.Category.TYPE_EARNING,
+            total_type=models.Category.TOTAL_TYPE_REGULAR
+        )
+        # Create an EarningTransaction.
+        earning_transaction1 = factories.EarningTransactionFactory.build(
+            title="Important Transaction",
+            category=category,
+        )
+        # Create a unique slug for the EarningTransaction.
+        new_slug1 = utils.create_unique_slug_for_transaction(earning_transaction1)
+        # Save the EarningTransaction.
+        earning_transaction1.slug = new_slug1
+        earning_transaction1.save()
+
+        # Create another EarningTransaction.
+        earning_transaction2 = factories.EarningTransactionFactory.build(
+            title="Important Transaction",
+            category=category,
+        )
+        # Create a unique slug for the EarningTransaction.
+        new_slug2 = utils.create_unique_slug_for_transaction(earning_transaction2)
+        # Save the EarningTransaction.
+        earning_transaction2.slug = new_slug2
+        earning_transaction2.save()
+
+        # Assert that the new_slug1 and new_slug2 are not the same.
+        self.assertNotEqual(new_slug1, new_slug2)
+
+    def test_invalid_inputs(self):
+        """Test passing invalid input values."""
+        for invalid_value in ["not a transaction", "", None, [], {"something": "something else"}]:
+            with self.assertRaises(AttributeError):
+                utils.create_unique_slug_for_transaction(invalid_value)

@@ -1,5 +1,6 @@
 from datetime import date, datetime
 
+from django.forms.models import model_to_dict
 from django.test import TestCase
 from django.urls import reverse
 from django.utils.text import slugify
@@ -421,3 +422,356 @@ class TestEditTransactionTestCase(TestCase):
             self.assertEqual(response.status_code, 405)
             response = self.client.put(self.url_transaction_earning)
             self.assertEqual(response.status_code, 405)
+
+
+class TestCopyTransactionsTestCase(TestCase):
+    url_name = 'copy_transactions'
+    template_name = "occurrence/copy_transactions.html"
+
+    def setUp(self):
+        super().setUp()
+        self.transaction_expense1 = factories.ExpenseTransactionFactory()
+        self.transaction_expense2 = factories.ExpenseTransactionFactory()
+        self.transaction_expense3 = factories.ExpenseTransactionFactory()
+        self.transaction_earning1 = factories.EarningTransactionFactory()
+        self.transaction_earning2 = factories.EarningTransactionFactory()
+        self.transaction_earning3 = factories.EarningTransactionFactory()
+
+    def assert_transactions_have_same_data(self, transaction1, transaction2):
+        """
+        Assert that two transactions have the same data.
+
+        Note: we specifically use model_to_dict(), to make sure that any future field
+        additions to the transaction model get checked in this test class.
+        """
+        data_transaction1 = model_to_dict(transaction1)
+        data_transaction2 = model_to_dict(transaction2)
+
+        for field_name, field_value in data_transaction1.items():
+            if field_name not in ["id", "slug", "date", "month"]:
+                self.assertEqual(
+                    data_transaction2[field_name],
+                    field_value,
+                    f"field '{field_name}' does not match"
+                )
+
+    def test_get_page(self):
+        """GET the page to copy transactions."""
+        with self.subTest('ExpenseTransaction'):
+            url = reverse(self.url_name) + (
+                f"?transaction_type={models.Category.TYPE_EXPENSE}"
+                f"&selected_transactions={self.transaction_expense1.id}"
+            )
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 200)
+            self.assertTemplateUsed(response, self.template_name)
+            self.assertEqual(
+                [transaction for transaction in response.context['transactions']],
+                [self.transaction_expense1],
+            )
+
+        with self.subTest('EarningTransaction'):
+            url = reverse(self.url_name) + (
+                f"?transaction_type={models.Category.TYPE_EARNING}"
+                f"&selected_transactions={self.transaction_earning1.id}"
+            )
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 200)
+            self.assertTemplateUsed(response, self.template_name)
+            self.assertEqual(
+                [transaction for transaction in response.context['transactions']],
+                [self.transaction_earning1],
+            )
+
+    def test_get_invalid_params(self):
+        """GET the page to copy transactions, but without sending necessary parameters."""
+        with self.subTest('no transaction_type'):
+            url = reverse(self.url_name) + (
+                f"?selected_transactions={self.transaction_expense1.id}"
+            )
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 200)
+            self.assertTemplateUsed(response, self.template_name)
+            expected_error = (
+                "You must choose a valid transaction_type (either 'expense' or 'income')."
+            )
+            self.assertEqual(response.context['errors'], [expected_error])
+
+        with self.subTest('invalid transaction_type'):
+            url = reverse(self.url_name) + (
+                f"?transaction_type=something"
+                f"&selected_transactions={self.transaction_expense1.id}"
+            )
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 200)
+            self.assertTemplateUsed(response, self.template_name)
+            expected_error = (
+                "You must choose a valid transaction_type (either 'expense' or 'income')."
+            )
+            self.assertEqual(response.context['errors'], [expected_error])
+
+        with self.subTest('no selected_transactions'):
+            url = reverse(self.url_name) + (
+                f"?transaction_type={models.Category.TYPE_EXPENSE}"
+            )
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 200)
+            self.assertTemplateUsed(response, self.template_name)
+            self.assertEqual(response.context['errors'], [])
+            self.assertEqual([t for t in response.context['transactions']], [])
+
+        with self.subTest('invalid selected_transactions'):
+            url = reverse(self.url_name) + (
+                f"?transaction_type={models.Category.TYPE_EXPENSE}"
+                f"&selected_transactions=a"
+            )
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 200)
+            self.assertTemplateUsed(response, self.template_name)
+            self.assertEqual(response.context['errors'], ['The selected transaction ids must be integers.'])
+
+        with self.subTest('non-existent selected_transactions'):
+            url = reverse(self.url_name) + (
+                f"?transaction_type={models.Category.TYPE_EXPENSE}"
+                # an ExpenseTransaction with this id does not exist
+                f"&selected_transactions=1000000000000000"
+            )
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 200)
+            self.assertTemplateUsed(response, self.template_name)
+            self.assertEqual(
+                response.context["errors"],
+                ["One or more of the selected transactions does not exist."]
+            )
+
+        with self.subTest('an existent and a non-existent selected_transactions'):
+            url = reverse(self.url_name) + (
+                f"?transaction_type={models.Category.TYPE_EXPENSE}"
+                # an ExpenseTransaction with this id does not exist
+                f"&selected_transactions={self.transaction_expense1.id}"
+                "&selected_transactions=1000000000000000"
+            )
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 200)
+            self.assertTemplateUsed(response, self.template_name)
+            self.assertEqual(
+                response.context["errors"],
+                ["One or more of the selected transactions does not exist."]
+            )
+
+    def test_post_valid(self):
+        """Make a valid POST to copy transactions."""
+        # The date string that will be used in this test.
+        new_date_str = '2020-01-01'
+        # Currently, no transactions exist for the new_date_str.
+        self.assertEqual(models.ExpenseTransaction.objects.filter(date=new_date_str).count(), 0)
+        self.assertEqual(models.EarningTransaction.objects.filter(date=new_date_str).count(), 0)
+
+        data = {'date': new_date_str}
+
+        with self.subTest('ExpenseTransactions'):
+            data["transaction_type"] = models.Category.TYPE_EXPENSE
+            data["selected_transactions"] = [self.transaction_expense1.id, self.transaction_expense2.id]
+
+            response = self.client.post(reverse(self.url_name), data)
+
+            # The user was redirected to the transactions page.
+            expected_redirect_url = reverse('transactions')
+            self.assertRedirects(response, expected_redirect_url)
+            # Two new transactions have been created.
+            self.assertEqual(
+                models.ExpenseTransaction.objects.filter(date=new_date_str).count(),
+                2,
+            )
+            # There are now 2 transactions with the title that self.transaction_expense1 has.
+            self.assertEqual(
+                models.ExpenseTransaction.objects.filter(
+                    title=self.transaction_expense1.title
+                ).count(),
+                2,
+            )
+            # There are now 2 transactions with the title that self.transaction_expense2 has.
+            self.assertEqual(
+                models.ExpenseTransaction.objects.filter(
+                    title=self.transaction_expense2.title
+                ).count(),
+                2,
+            )
+            # There is only 1 transaction with the title that self.transaction_expense3 has.
+            self.assertEqual(
+                models.ExpenseTransaction.objects.filter(
+                    title=self.transaction_expense3.title
+                ).count(),
+                1,
+            )
+
+            # Make sure that the new transactions have the same data as the transactions
+            # that they copied.
+            new_transaction1 = models.ExpenseTransaction.objects.get(
+                date=new_date_str,
+                title=self.transaction_expense1.title
+            )
+            new_transaction2 = models.ExpenseTransaction.objects.get(
+                date=new_date_str,
+                title=self.transaction_expense2.title
+            )
+            self.assert_transactions_have_same_data(self.transaction_expense1, new_transaction1)
+            self.assert_transactions_have_same_data(self.transaction_expense2, new_transaction2)
+
+        with self.subTest('EarningTransactions'):
+            data["transaction_type"] = models.Category.TYPE_EARNING
+            data["selected_transactions"] = [self.transaction_earning1.id]
+
+            response = self.client.post(reverse(self.url_name), data)
+
+            # The user was redirected to the transactions page.
+            expected_redirect_url = reverse('transactions')
+            self.assertRedirects(response, expected_redirect_url)
+            # One new transaction has been created.
+            self.assertEqual(
+                models.EarningTransaction.objects.filter(date=new_date_str).count(),
+                1
+            )
+            # There are now 2 transactions with the title that self.transaction_earning1 has.
+            self.assertEqual(
+                models.EarningTransaction.objects.filter(
+                    title=self.transaction_earning1.title
+                ).count(),
+                2,
+            )
+            # There is only 1 transaction with the title that self.transaction_earning2 has.
+            self.assertEqual(
+                models.EarningTransaction.objects.filter(
+                    title=self.transaction_earning2.title
+                ).count(),
+                1,
+            )
+            # There is only 1 transaction with the title that self.transaction_earning3 has.
+            self.assertEqual(
+                models.EarningTransaction.objects.filter(
+                    title=self.transaction_earning3.title
+                ).count(),
+                1,
+            )
+            # Make sure that the new transactions have the same data as the transactions
+            # that they copied.
+            new_transaction1 = models.EarningTransaction.objects.get(
+                date=new_date_str,
+                title=self.transaction_earning1.title
+            )
+            self.assert_transactions_have_same_data(self.transaction_earning1, new_transaction1)
+
+    def test_post_invalid(self):
+        """Make an invalid POST to copy transactions."""
+        # The date string that will be used in this test.
+        new_date_str = '2020-01-01'
+        # Currently, no transactions exist for the new_date_str.
+        self.assertEqual(models.ExpenseTransaction.objects.filter(date=new_date_str).count(), 0)
+        self.assertEqual(models.EarningTransaction.objects.filter(date=new_date_str).count(), 0)
+
+        data = {'date': new_date_str}
+
+        count_expense_transactions = models.ExpenseTransaction.objects.count()
+        count_earning_transactions = models.EarningTransaction.objects.count()
+
+        with self.subTest('no transaction_type'):
+            data["selected_transactions"] = [self.transaction_earning1.id]
+
+            response = self.client.post(reverse(self.url_name), data)
+
+            self.assertEqual(response.status_code, 200)
+            self.assertTemplateUsed(response, self.template_name)
+            expected_error = (
+                "You must choose a valid transaction_type (either 'expense' or 'income')."
+            )
+            self.assertEqual(response.context['errors'], [expected_error])
+            # No transactions were created.
+            self.assertEqual(models.ExpenseTransaction.objects.count(), count_expense_transactions)
+            self.assertEqual(models.EarningTransaction.objects.count(), count_expense_transactions)
+
+        with self.subTest('invalid transaction_type'):
+            data["transaction_type"] = "not a valid transaction_type"
+            data["selected_transactions"] = [self.transaction_earning1.id]
+
+            response = self.client.post(reverse(self.url_name), data)
+            self.assertEqual(response.status_code, 200)
+            self.assertTemplateUsed(response, self.template_name)
+            expected_error = (
+                "You must choose a valid transaction_type (either 'expense' or 'income')."
+            )
+            self.assertEqual(response.context['errors'], [expected_error])
+            # No transactions were created.
+            self.assertEqual(models.ExpenseTransaction.objects.count(), count_expense_transactions)
+            self.assertEqual(models.EarningTransaction.objects.count(), count_expense_transactions)
+
+        with self.subTest('no selected_transactions'):
+            data["transaction_type"] = models.Category.TYPE_EARNING
+            data["selected_transactions"] = []
+
+            response = self.client.post(reverse(self.url_name), data)
+
+            # The user was redirected to the transactions page.
+            expected_redirect_url = reverse('transactions')
+            self.assertRedirects(response, expected_redirect_url)
+            # No transactions were created.
+            self.assertEqual(models.ExpenseTransaction.objects.count(), count_expense_transactions)
+            self.assertEqual(models.EarningTransaction.objects.count(), count_expense_transactions)
+
+        with self.subTest('invalid selected_transactions'):
+            data["transaction_type"] = models.Category.TYPE_EARNING
+            data["selected_transactions"] = ["not a valid id"]
+
+            response = self.client.post(reverse(self.url_name), data)
+
+            self.assertEqual(response.status_code, 200)
+            self.assertTemplateUsed(response, self.template_name)
+            self.assertEqual(response.context['errors'], ['The selected transaction ids must be integers.'])
+            # No transactions were created.
+            self.assertEqual(models.ExpenseTransaction.objects.count(), count_expense_transactions)
+            self.assertEqual(models.EarningTransaction.objects.count(), count_expense_transactions)
+
+        with self.subTest('non-existent selected_transactions'):
+            data["transaction_type"] = models.Category.TYPE_EARNING
+            data["selected_transactions"] = [1000000000000000]
+
+            response = self.client.post(reverse(self.url_name), data)
+
+            self.assertEqual(response.status_code, 200)
+            self.assertTemplateUsed(response, self.template_name)
+            self.assertEqual(
+                response.context['errors'],
+                ["One or more of the selected transactions does not exist."],
+            )
+            # No transactions were created.
+            self.assertEqual(models.ExpenseTransaction.objects.count(), count_expense_transactions)
+            self.assertEqual(models.EarningTransaction.objects.count(), count_expense_transactions)
+
+        with self.subTest('an existent and a non-existent selected_transactions'):
+            data["transaction_type"] = models.Category.TYPE_EARNING
+            data["selected_transactions"] = [self.transaction_expense1.id, 1000000000000000]
+
+            response = self.client.post(reverse(self.url_name), data)
+
+            self.assertEqual(response.status_code, 200)
+            self.assertTemplateUsed(response, self.template_name)
+            self.assertEqual(
+                response.context['errors'],
+                ["One or more of the selected transactions does not exist."],
+            )
+            # No transactions were created.
+            self.assertEqual(models.ExpenseTransaction.objects.count(), count_expense_transactions)
+            self.assertEqual(models.EarningTransaction.objects.count(), count_expense_transactions)
+
+        with self.subTest('invalid date'):
+            data["transaction_type"] = models.Category.TYPE_EARNING
+            data["selected_transactions"] = [self.transaction_earning1.id]
+            data["date"] = "not a valid date"
+
+            response = self.client.post(reverse(self.url_name), data)
+
+            self.assertEqual(response.status_code, 200)
+            self.assertTemplateUsed(response, self.template_name)
+            expected_error = (
+                f"You must choose a date in the appropriate format. '{data['date']}' is not valid."
+            )
+            self.assertEqual(response.context['errors'], [expected_error])
