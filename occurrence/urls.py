@@ -1,22 +1,22 @@
-from django.conf.urls import url
+from django.urls import re_path
 
 from . import views
 
 
 urlpatterns = [
-    url(r'^transactions/$',
+    re_path(r'^transactions/$',
         views.transactions,
         name='transactions'),
-    url(r'edit_transaction/(?P<type_cat>[-\w]+)/(?P<id>[0-9]+)/$',
+    re_path(r'edit_transaction/(?P<type_cat>[-\w]+)/(?P<id>[0-9]+)/$',
         views.edit_transaction,
         name='edit_transaction'),
-    url(r'copy_transactions/$',
+    re_path(r'copy_transactions/$',
         views.copy_transactions,
         name='copy_transactions'),
-    url(r'^totals/$',
+    re_path(r'^totals/$',
         views.totals,
         name='totals'),
-    url(r'^running_totals/$',
+    re_path(r'^running_totals/$',
         views.running_total_categories,
         name='running_totals')
 ]

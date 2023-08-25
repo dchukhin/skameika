@@ -29,3 +29,5 @@ if 'test' in sys.argv:
     )
 
     LOGGING['root']['handlers'] = []
+
+MIDDLEWARE += ['debug_toolbar.middleware.DebugToolbarMiddleware']
