@@ -3,8 +3,8 @@ from datetime import date
 from django.db.utils import IntegrityError
 from django.test import TestCase
 
-from . import factories
 from .. import models
+from . import factories
 
 
 class TestCategory(TestCase):
@@ -25,27 +25,31 @@ class TestCategory(TestCase):
 
     def test_default_ordering(self):
         """Default ordering is by order field, then by name field."""
-        cat_order_1_name_a2 = factories.CategoryFactory(order=1, name='a2')
-        cat_order_2_name_a1 = factories.CategoryFactory(order=2, name='a1')
-        cat_order_1_name_b2 = factories.CategoryFactory(order=1, name='b2')
-        cat_order_2_name_b1 = factories.CategoryFactory(order=2, name='b1')
+        cat_order_1_name_a2 = factories.CategoryFactory(order=1, name="a2")
+        cat_order_2_name_a1 = factories.CategoryFactory(order=2, name="a1")
+        cat_order_1_name_b2 = factories.CategoryFactory(order=1, name="b2")
+        cat_order_2_name_b1 = factories.CategoryFactory(order=2, name="b1")
 
-        with self.subTest('Categories with same order are ordered by name'):
+        with self.subTest("Categories with same order are ordered by name"):
             qs = models.Category.objects.filter(
                 id__in=[cat_order_1_name_b2.id, cat_order_1_name_a2.id]
             )
             self.assertEqual(
-                set(qs.values_list('id', flat=True)),
-                set([cat_order_1_name_a2.id, cat_order_1_name_b2.id])
+                set(qs.values_list("id", flat=True)),
+                set([cat_order_1_name_a2.id, cat_order_1_name_b2.id]),
             )
 
-        with self.subTest('all Categories'):
+        with self.subTest("all Categories"):
             self.assertEqual(
-                set(models.Category.objects.all().values_list('id', flat=True)),
+                set(models.Category.objects.all().values_list("id", flat=True)),
                 set(
-                    [cat_order_1_name_a2.id, cat_order_1_name_b2.id,
-                     cat_order_2_name_a1.id, cat_order_2_name_b1.id]
-                )
+                    [
+                        cat_order_1_name_a2.id,
+                        cat_order_1_name_b2.id,
+                        cat_order_2_name_a1.id,
+                        cat_order_2_name_b1.id,
+                    ]
+                ),
             )
 
     def test_parent_child_deletion(self):
@@ -60,7 +64,9 @@ class TestCategory(TestCase):
 
         for category in [parent, grandchild]:
             category.refresh_from_db()
-            self.assertIsNotNone(category.id, )
+            self.assertIsNotNone(
+                category.id,
+            )
 
 
 class TestMonth(TestCase):
@@ -84,28 +90,25 @@ class TransactionBaseMixin(object):
         transaction = self.factory()
         self.assertEqual(
             str(transaction),
-            '{} - {}'.format(
-                transaction.title,
-                transaction.date.strftime('%Y-%m-%d')
-            )
+            "{} - {}".format(transaction.title, transaction.date.strftime("%Y-%m-%d")),
         )
 
     def test_save_unique_slug(self):
         """Saving a Transaction gives it a unique slug."""
-        with self.subTest('First Transaction'):
+        with self.subTest("First Transaction"):
             # Currently, there are no Transactions
             self.assertEqual(self.model_class.objects.count(), 0)
             transaction1 = self.factory()
             # Now there is 1 Transaction
             self.assertEqual(self.model_class.objects.count(), 1)
 
-        with self.subTest('Second Transaction with same slug'):
+        with self.subTest("Second Transaction with same slug"):
             transaction2 = self.factory(slug=transaction1.slug)
             # Now there are 2 Transactions, and their slugs are unique
             self.assertEqual(self.model_class.objects.count(), 2)
             self.assertNotEqual(transaction2.slug, transaction1.slug)
 
-        with self.subTest('Third Transaction with same slug'):
+        with self.subTest("Third Transaction with same slug"):
             transaction3 = self.factory(slug=transaction1.slug)
             # Now there are 3 Transactions, and their slugs are unique
             self.assertEqual(self.model_class.objects.count(), 3)
@@ -113,7 +116,7 @@ class TransactionBaseMixin(object):
 
     def save_slug_already_unique(self):
         """Saving a Transaction with a slug that is already unique keeps its slug."""
-        unique_slug = 'uniqueslug'
+        unique_slug = "uniqueslug"
         # A transaction with a unique slug
         transaction1 = self.factory(slug=unique_slug)
         # A second transaction with the same title and date as transaction1
@@ -126,33 +129,33 @@ class TransactionBaseMixin(object):
 
     def test_save_associate_month(self):
         """Saving a Transaction without a Month associates it with correct Month."""
-        with self.subTest('new Transaction with no associated month; no Month object'):
+        with self.subTest("new Transaction with no associated month; no Month object"):
             test_date = date(year=2017, month=5, day=1)
             transaction1 = self.factory(date=test_date, month=None)
             # The transaction1 now has the correct month
-            self.assertEqual(transaction1.month.name, test_date.strftime('%B, %Y'))
+            self.assertEqual(transaction1.month.name, test_date.strftime("%B, %Y"))
             may_2017_month = transaction1.month
 
-        with self.subTest('new Transaction with no associated month; Month object exists'):
+        with self.subTest("new Transaction with no associated month; Month object exists"):
             # Now the Month for the test_date exists (may_2017_month). The next
             # Transaction in May, 2017 should be associated with it
             transaction2 = self.factory(date=test_date, month=None)
             # The transaction2 now has the correct month
             self.assertEqual(transaction2.month, may_2017_month)
 
-        with self.subTest('new Transaction with associated month'):
+        with self.subTest("new Transaction with associated month"):
             transaction3 = self.factory(date=test_date, month=may_2017_month)
             # The transaction3 is still associated with may_2017_month
             self.assertEqual(transaction3.month, may_2017_month)
 
-        with self.subTest('Transaction associated with wrong Month'):
-            june_2017_month = factories.MonthFactory(month=6, year=2017, name='June, 2017')
+        with self.subTest("Transaction associated with wrong Month"):
+            june_2017_month = factories.MonthFactory(month=6, year=2017, name="June, 2017")
             transaction3.month = june_2017_month
             transaction3.save()
             # The transaction3 is now associated with may_2017_month
             self.assertEqual(transaction3.month, may_2017_month)
 
-        with self.subTest('changing Transaction date associates it with correct Month'):
+        with self.subTest("changing Transaction date associates it with correct Month"):
             # Currently, transaction3 is associated with may_2017_month
             self.assertEqual(transaction3.month, may_2017_month)
             # Change the transaction3 date to be in June, 2017
@@ -185,12 +188,12 @@ class TestMonthlyStatistic(TestCase):
         monthly_statistic = factories.MonthlyStatisticFactory()
         self.assertEqual(
             str(monthly_statistic),
-            '{} for {}'.format(monthly_statistic.statistic, monthly_statistic.month)
+            "{} for {}".format(monthly_statistic.statistic, monthly_statistic.month),
         )
 
     def test_unique_together(self):
         """A MonthlyStatistic's Statistic and Month are unique_together."""
-        statistic_1 = factories.StatisticFactory(name='Statistic One')
+        statistic_1 = factories.StatisticFactory(name="Statistic One")
         month_1 = factories.MonthFactory()
 
         # Create a MonthlyStatistic for statistic_1 and month_1
@@ -208,15 +211,14 @@ class TestExpectedMonthlyCategoryTotal(TestCase):
         expected_monthly_total = factories.ExpectedMonthlyCategoryTotalFactory()
         self.assertEqual(
             str(expected_monthly_total),
-            'Expected amount for {} in {}'.format(
-                expected_monthly_total.category,
-                expected_monthly_total.month
-            )
+            "Expected amount for {} in {}".format(
+                expected_monthly_total.category, expected_monthly_total.month
+            ),
         )
 
     def test_unique_together(self):
         """A TestExpectedMonthlyCategoryTotal's Cateogry and Month are unique_together."""
-        category_1 = factories.CategoryFactory(name='Category One')
+        category_1 = factories.CategoryFactory(name="Category One")
         month_1 = factories.MonthFactory()
 
         # Create a ExpectedMonthlyCategoryTotal for category_1 and month_1

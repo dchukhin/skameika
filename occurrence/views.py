@@ -15,44 +15,49 @@ from . import forms, models, utils
 def transactions(request, *args, **kwargs):
     """Show all current transactions."""
     # Get the current_month, either from the request kwargs, or use the today's month
-    if request.GET.get('month'):
-        current_month = get_object_or_404(
-            models.Month.objects.all(),
-            slug=request.GET.get('month')
-        )
+    if request.GET.get("month"):
+        current_month = get_object_or_404(models.Month.objects.all(), slug=request.GET.get("month"))
     else:
         current_month = models.Month.objects.get_or_create(
             year=date.today().year,
             month=date.today().month,
-            name=date.today().strftime('%B, %Y'),
+            name=date.today().strftime("%B, %Y"),
         )[0]
-    expense_transactions = models.ExpenseTransaction.objects.filter(month=current_month).select_related('category')
-    earning_transactions = models.EarningTransaction.objects.filter(month=current_month).select_related('category')
-    expense_transaction_titles = models.ExpenseTransaction.objects.order_by(
-        'title'
-    ).values_list("title", flat=True).distinct('title')
-    earning_transaction_titles = models.EarningTransaction.objects.order_by(
-        'title'
-    ).values_list("title", flat=True).distinct('title')
+    expense_transactions = models.ExpenseTransaction.objects.filter(
+        month=current_month
+    ).select_related("category")
+    earning_transactions = models.EarningTransaction.objects.filter(
+        month=current_month
+    ).select_related("category")
+    expense_transaction_titles = (
+        models.ExpenseTransaction.objects.order_by("title")
+        .values_list("title", flat=True)
+        .distinct("title")
+    )
+    earning_transaction_titles = (
+        models.EarningTransaction.objects.order_by("title")
+        .values_list("title", flat=True)
+        .distinct("title")
+    )
 
     context = {
-        'expense_transactions': expense_transactions,
-        'earning_transactions': earning_transactions,
-        'expense_form': forms.ExpenseTransactionForm(),
-        'earning_form': forms.EarningTransactionForm(),
-        'current_month': current_month,
-        'months': models.Month.objects.all(),
-        'expense_transaction_choices': expense_transaction_titles,
-        'earning_transaction_choices': earning_transaction_titles,
-        'expense_transaction_constant': models.Category.TYPE_EXPENSE,
-        'earning_transaction_constant': models.Category.TYPE_EARNING,
+        "expense_transactions": expense_transactions,
+        "earning_transactions": earning_transactions,
+        "expense_form": forms.ExpenseTransactionForm(),
+        "earning_form": forms.EarningTransactionForm(),
+        "current_month": current_month,
+        "months": models.Month.objects.all(),
+        "expense_transaction_choices": expense_transaction_titles,
+        "earning_transaction_choices": earning_transaction_titles,
+        "expense_transaction_constant": models.Category.TYPE_EXPENSE,
+        "earning_transaction_constant": models.Category.TYPE_EARNING,
     }
-    if request.method == 'POST':
+    if request.method == "POST":
         # Is this for an expense, or an earning?
-        if request.POST.get('form_type') == 'expense':
+        if request.POST.get("form_type") == "expense":
             # Use the ExpenseTransactionForm for expense POSTs
             form = forms.ExpenseTransactionForm(request.POST)
-        elif request.POST.get('form_type') == 'earning':
+        elif request.POST.get("form_type") == "earning":
             # Use the EarningTransactionForm for earning POSTs
             form = forms.EarningTransactionForm(request.POST)
 
@@ -61,24 +66,24 @@ def transactions(request, *args, **kwargs):
             form.save()
         else:
             # The form is not valid, so return the invalid form to the template
-            context['expense_form'] = form
-    return render(request, 'occurrence/transactions.html', context)
+            context["expense_form"] = form
+    return render(request, "occurrence/transactions.html", context)
 
 
 @require_http_methods(["GET"])
 def totals(request, *args, **kwargs):
     """Show totals (for transactions) by category."""
-    month_slug = request.GET.get('month')
+    month_slug = request.GET.get("month")
     # If the user did not provide a month_slug, then redirect to the totals
     # for the current month
     if not month_slug:
         current_month = models.Month.objects.get_or_create(
             year=date.today().year,
             month=date.today().month,
-            name=date.today().strftime('%B, %Y'),
-            slug=slugify(date.today().strftime('%B, %Y')),
+            name=date.today().strftime("%B, %Y"),
+            slug=slugify(date.today().strftime("%B, %Y")),
         )[0]
-        return redirect('{}?month={}'.format(reverse('totals'), current_month.slug))
+        return redirect("{}?month={}".format(reverse("totals"), current_month.slug))
 
     month = get_object_or_404(models.Month.objects.all(), slug=month_slug)
 
@@ -97,16 +102,16 @@ def totals(request, *args, **kwargs):
     monthly_statistics = models.MonthlyStatistic.objects.filter(month=month)
 
     context = {
-        'expense_categories': expense_categories,
-        'expense_total': expense_total,
-        'earning_categories': earning_categories,
-        'earning_total': earning_total,
-        'total': earning_total - expense_total,
-        'monthly_statistics': monthly_statistics,
-        'months': models.Month.objects.all(),
-        'active_month': month,
+        "expense_categories": expense_categories,
+        "expense_total": expense_total,
+        "earning_categories": earning_categories,
+        "earning_total": earning_total,
+        "total": earning_total - expense_total,
+        "monthly_statistics": monthly_statistics,
+        "months": models.Month.objects.all(),
+        "active_month": month,
     }
-    return render(request, 'occurrence/totals.html', context)
+    return render(request, "occurrence/totals.html", context)
 
 
 @require_http_methods(["GET"])
@@ -115,20 +120,15 @@ def running_total_categories(request):
     categories = models.Category.objects.filter(
         total_type=models.Category.TOTAL_TYPE_RUNNING
     ).annotate(
-        total=Sum(
-            F('expensetransaction__amount') * Value('-1'),
-            output_field=DecimalField()
-        ),
+        total=Sum(F("expensetransaction__amount") * Value("-1"), output_field=DecimalField()),
     )
     # For each Category, attach a queryset of ExpenseTransactions that have a
     # running_total_amount fiels
     for category in categories:
         category.expense_transactions = utils.get_expensetransactions_running_totals(category)
 
-    context = {
-        'categories': categories
-    }
-    return render(request, 'occurrence/running_totals.html', context)
+    context = {"categories": categories}
+    return render(request, "occurrence/running_totals.html", context)
 
 
 @require_http_methods(["GET", "POST"])
@@ -136,17 +136,11 @@ def edit_transaction(request, type_cat, id):
     """Edit a transaction."""
     # Attempt to find the transaction, based on the type_cat
     if type_cat == models.Category.TYPE_EXPENSE:
-        transaction = get_object_or_404(
-            models.ExpenseTransaction.objects.all(),
-            pk=id
-        )
+        transaction = get_object_or_404(models.ExpenseTransaction.objects.all(), pk=id)
     elif type_cat == models.Category.TYPE_EARNING:
-        transaction = get_object_or_404(
-            models.EarningTransaction.objects.all(),
-            pk=id
-        )
+        transaction = get_object_or_404(models.EarningTransaction.objects.all(), pk=id)
     else:
-        raise Http404('Category type not recognized')
+        raise Http404("Category type not recognized")
 
     if request.method == "POST":
         if type_cat == models.Category.TYPE_EXPENSE:
@@ -158,14 +152,14 @@ def edit_transaction(request, type_cat, id):
             form.save()
             # Redirect the user to the transactions view for the month that this
             # transaction is in
-            return redirect('{}?month={}'.format(reverse('transactions'), transaction.month.slug))
+            return redirect("{}?month={}".format(reverse("transactions"), transaction.month.slug))
     else:
         if type_cat == models.Category.TYPE_EXPENSE:
             form = forms.ExpenseTransactionForm(instance=transaction)
         elif type_cat == models.Category.TYPE_EARNING:
             form = forms.EarningTransactionForm(instance=transaction)
-    context = {'form': form, 'transaction': transaction, 'type_cat': type_cat}
-    return render(request, 'occurrence/edit_transaction.html', context)
+    context = {"form": form, "transaction": transaction, "type_cat": type_cat}
+    return render(request, "occurrence/edit_transaction.html", context)
 
 
 @require_http_methods(["GET", "POST"])
@@ -184,8 +178,8 @@ def copy_transactions(request):
         for id in request_transaction_ids:
             selected_transaction_ids.append(int(id))
     except (ValueError, TypeError):
-        context = {'errors': ["The selected transaction ids must be integers."]}
-        return render(request, 'occurrence/copy_transactions.html', context)
+        context = {"errors": ["The selected transaction ids must be integers."]}
+        return render(request, "occurrence/copy_transactions.html", context)
 
     if transaction_type == models.Category.TYPE_EXPENSE:
         transactions = models.ExpenseTransaction.objects.filter(id__in=selected_transaction_ids)
@@ -196,18 +190,22 @@ def copy_transactions(request):
             f"You must choose a valid transaction_type (either '{models.Category.TYPE_EXPENSE}' "
             f"or '{models.Category.TYPE_EARNING}')."
         )
-        context = {'errors': [error]}
-        return render(request, 'occurrence/copy_transactions.html', context)
+        context = {"errors": [error]}
+        return render(request, "occurrence/copy_transactions.html", context)
 
     if len(request_transaction_ids) != transactions.count():
         error = "One or more of the selected transactions does not exist."
-        context = {'errors': [error]}
-        return render(request, 'occurrence/copy_transactions.html', context)
+        context = {"errors": [error]}
+        return render(request, "occurrence/copy_transactions.html", context)
 
     if request.method == "GET":
         # For GET requests, render a page with the relevant transaction data.
-        context = {'transactions': transactions, 'transaction_type': transaction_type, 'errors': []}
-        return render(request, 'occurrence/copy_transactions.html', context)
+        context = {
+            "transactions": transactions,
+            "transaction_type": transaction_type,
+            "errors": [],
+        }
+        return render(request, "occurrence/copy_transactions.html", context)
     else:
         # For POST requests, create new transactions, based on the chosen transactions' data.
         new_date = request.POST.get("date")
@@ -215,8 +213,8 @@ def copy_transactions(request):
             new_date_obj = parse_date(new_date)
         if not new_date_obj:
             error = f"You must choose a date in the appropriate format. '{new_date}' is not valid."
-            context = {'errors': [error]}
-            return render(request, 'occurrence/copy_transactions.html', context)
+            context = {"errors": [error]}
+            return render(request, "occurrence/copy_transactions.html", context)
 
         # Determine the Month for the selected date.
         month = utils.get_or_create_month_for_date_obj(new_date_obj)
@@ -242,4 +240,4 @@ def copy_transactions(request):
         num_transactions_created = TransactionModel.objects.bulk_create(new_transactions)
 
         messages.success(request, f"{len(num_transactions_created)} transaction(s) copied.")
-        return redirect('transactions')
+        return redirect("transactions")

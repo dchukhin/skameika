@@ -20,11 +20,11 @@ def get_transactions_regular_totals(month=None, type_cat=models.Category.TYPE_EX
         )
         if month:
             transactions = transactions.filter(month=month)
-        category_totals = transactions.values(
-            'category'
-        ).order_by().distinct().annotate(total=Sum('amount'))
+        category_totals = (
+            transactions.values("category").order_by().distinct().annotate(total=Sum("amount"))
+        )
 
-        sum_total = category_totals.aggregate(grand_total=Sum('total'))['grand_total'] or 0
+        sum_total = category_totals.aggregate(grand_total=Sum("total"))["grand_total"] or 0
 
     elif type_cat == models.Category.TYPE_EARNING:
         # Get all of the EarningTransaction with a Cateogry of regular total_type
@@ -33,11 +33,11 @@ def get_transactions_regular_totals(month=None, type_cat=models.Category.TYPE_EX
         )
         if month:
             transactions = transactions.filter(month=month)
-        category_totals = transactions.values('category').order_by().distinct().annotate(
-            total=Sum('amount')
+        category_totals = (
+            transactions.values("category").order_by().distinct().annotate(total=Sum("amount"))
         )
 
-        sum_total = category_totals.aggregate(grand_total=Sum('total'))['grand_total'] or 0
+        sum_total = category_totals.aggregate(grand_total=Sum("total"))["grand_total"] or 0
 
     # A list of Categories, their totals, and their children (including
     # their children's totals)
@@ -45,40 +45,48 @@ def get_transactions_regular_totals(month=None, type_cat=models.Category.TYPE_EX
     # Loop through the category_totals, and add categories to category_dict,
     # as well as adding their parent Category (if applicable)
     for category_data in category_totals.values(
-        'category__name', 'category__id', 'category__order', 'total',
-        'category__parent', 'category__parent__name'
-    ).order_by('category__order', 'category__name'):
-        if category_data['category__parent']:
-            parent_id = category_data['category__parent']
+        "category__name",
+        "category__id",
+        "category__order",
+        "total",
+        "category__parent",
+        "category__parent__name",
+    ).order_by("category__order", "category__name"):
+        if category_data["category__parent"]:
+            parent_id = category_data["category__parent"]
             if parent_id in category_dict.keys():
                 # Add this total to the parent's total
-                category_dict[parent_id]["total"] += category_data['total']
+                category_dict[parent_id]["total"] += category_data["total"]
                 # # Add this Category to the list of children, preserving the order
-                index = category_data['category__order']
+                index = category_data["category__order"]
                 category_dict[parent_id]["children"].insert(
                     index,
-                    {"name": category_data['category__name'], "total": category_data['total']}
+                    {
+                        "name": category_data["category__name"],
+                        "total": category_data["total"],
+                    },
                 )
             else:
                 category_dict[parent_id] = {
-                    "name": category_data['category__parent__name'],
-                    "total": category_data['total'],
+                    "name": category_data["category__parent__name"],
+                    "total": category_data["total"],
                     "children": [
                         {
-                            "name": category_data['category__name'],
-                            "total": category_data['total']
+                            "name": category_data["category__name"],
+                            "total": category_data["total"],
                         }
-                    ]
+                    ],
                 }
         else:
             # If this Category is already in the category_dict, then just add
             # its amount to the total already there
-            if category_data['category__id'] in category_dict.keys():
-                category_dict[category_data['category__id']]['total'] += category_data['total']
+            if category_data["category__id"] in category_dict.keys():
+                category_dict[category_data["category__id"]]["total"] += category_data["total"]
             else:
-                category_dict[category_data['category__id']] = {
-                    "name": category_data['category__name'],
-                    "total": category_data['total'], "children": []
+                category_dict[category_data["category__id"]] = {
+                    "name": category_data["category__name"],
+                    "total": category_data["total"],
+                    "children": [],
                 }
 
     return category_dict, sum_total
@@ -100,10 +108,7 @@ def get_expensetransactions_running_totals(category):
     return models.ExpenseTransaction.objects.filter(
         category=category,
     ).annotate(
-        running_total_amount=Sum(
-            F('amount') * Value('-1'),
-            output_field=DecimalField()
-        ),
+        running_total_amount=Sum(F("amount") * Value("-1"), output_field=DecimalField()),
     )
 
 
@@ -116,16 +121,16 @@ def get_or_create_month_for_date_obj(date_obj):
         month = models.Month.objects.create(
             month=date_obj.month,
             year=date_obj.year,
-            name=date_obj.strftime('%B, %Y'),
-            slug=slugify(date_obj.strftime('%B, %Y')),
+            name=date_obj.strftime("%B, %Y"),
+            slug=slugify(date_obj.strftime("%B, %Y")),
         )
     return month
 
 
 def create_unique_slug_for_transaction(transaction):
     # Create a slug based on title, date, and some random characters.
-    return '{}-{}-{}'.format(
+    return "{}-{}-{}".format(
         slugify(transaction.title),
-        transaction.date.strftime('%Y-%m-%d'),
-        str(uuid.uuid4()).replace('-', '')[0: 10],
+        transaction.date.strftime("%Y-%m-%d"),
+        str(uuid.uuid4()).replace("-", "")[0:10],
     )

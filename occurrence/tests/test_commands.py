@@ -1,12 +1,12 @@
 from decimal import Decimal
 from io import StringIO
 
-from django.test import TestCase
 from django.core.management import call_command
 from django.core.management.base import CommandError
+from django.test import TestCase
 
-from . import factories
 from .. import models
+from . import factories
 
 
 class CreateMonthlyStatisticsForMonthTestCase(TestCase):
@@ -17,29 +17,32 @@ class CreateMonthlyStatisticsForMonthTestCase(TestCase):
         self.stderr = StringIO()
 
     def call_command(self, *args, **kwargs):
-        kwargs['stdout'] = self.stdout
-        kwargs['stderr'] = self.stderr
-        call_command('create_monthlystatistics_for_month', *args, **kwargs)
+        kwargs["stdout"] = self.stdout
+        kwargs["stderr"] = self.stderr
+        call_command("create_monthlystatistics_for_month", *args, **kwargs)
 
     def test_no_month_slug(self):
         """Calling create_monthlystatistics_for_month without month_slug raises an error."""
         factories.StatisticFactory()
         with self.assertRaises(CommandError) as error:
             self.call_command()
-        self.assertEqual(str(error.exception), 'Error: the following arguments are required: month_slug')
+        self.assertEqual(
+            str(error.exception),
+            "Error: the following arguments are required: month_slug",
+        )
 
     def test_no_months(self):
         """Calling create_monthlystatistics_for_month when no Months exist raises an error."""
         factories.StatisticFactory()
         with self.assertRaises(CommandError) as error:
-            self.call_command('')
+            self.call_command("")
         self.assertEqual(str(error.exception), 'Month not found for slug ""')
 
     def test_invalid_month(self):
         """Calling create_monthlystatistics_for_month for an invalid Month raises an error."""
         factories.StatisticFactory()
         with self.assertRaises(CommandError) as error:
-            self.call_command(' ')
+            self.call_command(" ")
         self.assertEqual(str(error.exception), 'Month not found for slug " "')
 
     def test_no_statistics(self):
@@ -70,13 +73,12 @@ class CreateMonthlyStatisticsForMonthTestCase(TestCase):
         self.assertEqual(models.MonthlyStatistic.objects.filter(statistic=statistic2).count(), 1)
         self.assertEqual(
             list(models.MonthlyStatistic.objects.values_list("amount", flat=True)),
-            [Decimal('1.23'), Decimal('1.23')],
+            [Decimal("1.23"), Decimal("1.23")],
         )
 
     def test_no_amount_defaults_to_0(self):
         """Not passing an 'amount' means that the amount defaults to 0.00."""
         month = factories.MonthFactory()
-        statistic = factories.StatisticFactory()
         # There are currently no MonthlyStatistics for the Month.
         self.assertFalse(models.MonthlyStatistic.objects.filter(month=month).exists())
 
@@ -85,5 +87,5 @@ class CreateMonthlyStatisticsForMonthTestCase(TestCase):
         # The newly-created MonthlyStatistic has an amount of 0.
         self.assertEqual(
             list(models.MonthlyStatistic.objects.values_list("amount", flat=True)),
-            [Decimal('0')],
+            [Decimal("0")],
         )

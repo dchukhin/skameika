@@ -1,3 +1,4 @@
-from skameika.settings.dev import *   # noqa
+from skameika.settings.dev import *  # noqa
+
 
 # Override settings here

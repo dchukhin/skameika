@@ -1,10 +1,10 @@
 import datetime
 
+from django.utils.text import slugify
+
 import factory
 import factory.django
 import factory.fuzzy
-
-from django.utils.text import slugify
 
 from .. import models
 
@@ -14,7 +14,7 @@ class CategoryFactory(factory.django.DjangoModelFactory):
     slug = factory.LazyAttribute(lambda o: slugify(o.name))
 
     class Meta:
-        model = 'occurrence.Category'
+        model = "occurrence.Category"
 
 
 class IncomeCategoryFactory(CategoryFactory):
@@ -32,35 +32,31 @@ class MonthFactory(factory.django.DjangoModelFactory):
     slug = factory.LazyAttribute(lambda o: slugify(o.name))
 
     class Meta:
-        model = 'occurrence.Month'
+        model = "occurrence.Month"
 
 
 class ExpenseTransactionFactory(factory.django.DjangoModelFactory):
     title = factory.fuzzy.FuzzyText()
     slug = factory.LazyAttribute(lambda o: slugify(o.title))
-    date = factory.fuzzy.FuzzyDate(
-        datetime.date(year=2017, month=1, day=1)
-    )
+    date = factory.fuzzy.FuzzyDate(datetime.date(year=2017, month=1, day=1))
     category = factory.SubFactory(ExpenseCategoryFactory)
     amount = factory.fuzzy.FuzzyDecimal(low=0, high=1000)
     description = factory.fuzzy.FuzzyText()
 
     class Meta:
-        model = 'occurrence.ExpenseTransaction'
+        model = "occurrence.ExpenseTransaction"
 
 
 class EarningTransactionFactory(factory.django.DjangoModelFactory):
     title = factory.fuzzy.FuzzyText()
     slug = factory.LazyAttribute(lambda o: slugify(o.title))
-    date = factory.fuzzy.FuzzyDate(
-        datetime.date(year=2017, month=1, day=1)
-    )
+    date = factory.fuzzy.FuzzyDate(datetime.date(year=2017, month=1, day=1))
     category = factory.SubFactory(IncomeCategoryFactory)
     amount = factory.fuzzy.FuzzyDecimal(low=0, high=1000)
     description = factory.fuzzy.FuzzyText()
 
     class Meta:
-        model = 'occurrence.EarningTransaction'
+        model = "occurrence.EarningTransaction"
 
 
 class StatisticFactory(factory.django.DjangoModelFactory):
@@ -68,7 +64,7 @@ class StatisticFactory(factory.django.DjangoModelFactory):
     slug = factory.LazyAttribute(lambda o: slugify(o.name))
 
     class Meta:
-        model = 'occurrence.Statistic'
+        model = "occurrence.Statistic"
 
 
 class MonthlyStatisticFactory(factory.django.DjangoModelFactory):
@@ -77,7 +73,7 @@ class MonthlyStatisticFactory(factory.django.DjangoModelFactory):
     amount = factory.fuzzy.FuzzyDecimal(low=0, high=100000)
 
     class Meta:
-        model = 'occurrence.MonthlyStatistic'
+        model = "occurrence.MonthlyStatistic"
 
 
 class ExpectedMonthlyCategoryTotalFactory(factory.django.DjangoModelFactory):
@@ -86,4 +82,4 @@ class ExpectedMonthlyCategoryTotalFactory(factory.django.DjangoModelFactory):
     amount = factory.fuzzy.FuzzyDecimal(low=0, high=100000)
 
     class Meta:
-        model = 'occurrence.ExpectedMonthlyCategoryTotal'
+        model = "occurrence.ExpectedMonthlyCategoryTotal"
