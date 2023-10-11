@@ -1,0 +1,6 @@
+# This is a file that holds the commit hashes that we want git to ignore when
+# we use `git blame`.
+# Tell git to read this file: git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# reformat files in repo according to pre-commit configuration
+43d7310d8958c446fd36873df310e484fedf415d

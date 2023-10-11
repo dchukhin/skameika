@@ -27,3 +27,6 @@ snowballstemmer==1.2.1
 
 # For debugging
 ipdb
+
+# For running lint, etc. hooks on commits
+pre-commit==3.4.0

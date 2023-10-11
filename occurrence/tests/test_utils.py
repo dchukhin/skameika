@@ -1,12 +1,12 @@
+import random
 from datetime import date, timedelta
 from decimal import Decimal
-import random
 
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
-from . import factories
 from .. import models, utils
+from . import factories
 
 
 class GetExpensetransactionsRunningTotalsTestCase(TestCase):
@@ -44,8 +44,8 @@ class GetExpensetransactionsRunningTotalsTestCase(TestCase):
         # The transactions in the results are trans1, trans2, and trans3
         self.assertEqual(results.count(), 3)
         self.assertEqual(
-            set(results.values_list('id', flat=True)),
-            set([trans1.id, trans2.id, trans3.id])
+            set(results.values_list("id", flat=True)),
+            set([trans1.id, trans2.id, trans3.id]),
         )
         # Each of the transactions now has a running_total_amount field, which
         # is equal to its amount, multiplied by -1
@@ -56,11 +56,11 @@ class GetExpensetransactionsRunningTotalsTestCase(TestCase):
         """A category that does not have a total_type of TOTAL_TYPE_RUNNING."""
         category = factories.CategoryFactory(total_type=models.Category.TOTAL_TYPE_REGULAR)
 
-        with self.subTest('No transactions'):
+        with self.subTest("No transactions"):
             results = utils.get_expensetransactions_running_totals(category)
             self.assertEqual(results.count(), 0)
 
-        with self.subTest('Some transactions'):
+        with self.subTest("Some transactions"):
             for i in range(0, 3):
                 factories.ExpenseTransactionFactory(category=category)
             results = utils.get_expensetransactions_running_totals(category)
@@ -68,7 +68,7 @@ class GetExpensetransactionsRunningTotalsTestCase(TestCase):
             # Since this is not a running type category, the ExpenseTransactions
             # do not have the running_total_amount field
             for transaction in results:
-                self.assertFalse(hasattr(transaction, 'running_total_amount'))
+                self.assertFalse(hasattr(transaction, "running_total_amount"))
 
 
 class GetTransactionsRegularTotalsTestCase(TestCase):
@@ -76,10 +76,10 @@ class GetTransactionsRegularTotalsTestCase(TestCase):
 
     def setUp(self):
         super().setUp()
-        self.month = factories.MonthFactory(year=2017, month=9, name='September, 2017')
+        self.month = factories.MonthFactory(year=2017, month=9, name="September, 2017")
         self.category_a = factories.CategoryFactory()
         self.category_b = factories.CategoryFactory()
-        self.DECIMAL_01 = Decimal(10)**(-2)
+        self.DECIMAL_01 = Decimal(10) ** (-2)
 
     def assertTotals(self, expected_categories, expected_sum_total, categories, sum_total):
         """Assert Categories and their totals."""
@@ -88,20 +88,20 @@ class GetTransactionsRegularTotalsTestCase(TestCase):
         # Each of the Categories has a 'total' field
         for category in categories:
             with self.subTest(category):
-                self.assertTrue(hasattr(category, 'total'))
+                self.assertTrue(hasattr(category, "total"))
         # The expected_sum_total matches the sum_total
         self.assertEqual(expected_sum_total, sum_total)
 
     def test_no_transactions(self):
         """Get totals when there are no transactions."""
-        with self.subTest('No transactions'):
+        with self.subTest("No transactions"):
             # Get results
             results, total = utils.get_transactions_regular_totals(self.month)
             # Verify results
             self.assertEqual({}, results)
             self.assertEqual(0, total)
 
-        with self.subTest('Get expense totals with only EarningTransactions'):
+        with self.subTest("Get expense totals with only EarningTransactions"):
             # Create some EarningTransactions
             earning_transs = [factories.EarningTransactionFactory() for i in range(0, 2)]
             # Get results
@@ -113,7 +113,7 @@ class GetTransactionsRegularTotalsTestCase(TestCase):
             self.assertEqual({}, results)
             self.assertEqual(0, total)
 
-        with self.subTest('Get earning totals with only expense transactions'):
+        with self.subTest("Get earning totals with only expense transactions"):
             # Delete any EarningTransactions
             for earning_trans in earning_transs:
                 earning_trans.delete()
@@ -144,18 +144,18 @@ class GetTransactionsRegularTotalsTestCase(TestCase):
             date=trans_month.date - timedelta(days=30),
         )
 
-        with self.subTest('No month parameter'):
+        with self.subTest("No month parameter"):
             # The expected results include both transactions
             expected_results = {
                 trans_month.category.id: {
                     "name": trans_month.category.name,
                     "total": trans_month.amount,
-                    "children": []
+                    "children": [],
                 },
                 trans_different_month.category.id: {
                     "name": trans_different_month.category.name,
                     "total": trans_different_month.amount,
-                    "children": []
+                    "children": [],
                 },
             }
             expected_sum_total = sum([trans_month.amount, trans_different_month.amount])
@@ -165,13 +165,13 @@ class GetTransactionsRegularTotalsTestCase(TestCase):
             self.assertEqual(expected_results, results)
             self.assertEqual(expected_sum_total, total)
 
-        with self.subTest('With month parameter'):
+        with self.subTest("With month parameter"):
             # The expected results for the month of trans_month
             expected_results = {
                 trans_month.category.id: {
                     "name": trans_month.category.name,
                     "total": trans_month.amount,
-                    "children": []
+                    "children": [],
                 },
             }
             expected_sum_total = trans_month.amount
@@ -181,10 +181,10 @@ class GetTransactionsRegularTotalsTestCase(TestCase):
             self.assertEqual(expected_results, results)
             self.assertEqual(expected_sum_total, total)
 
-        with self.subTest('Invalid month parameter'):
+        with self.subTest("Invalid month parameter"):
             # Passing an invalid month raises an error
             with self.assertRaises(ValueError):
-                utils.get_transactions_regular_totals('not a month')
+                utils.get_transactions_regular_totals("not a month")
 
     def test_type_cat_parameter(self):
         """Passing in a type_cat parameter correctly filters by that cat_type."""
@@ -199,13 +199,13 @@ class GetTransactionsRegularTotalsTestCase(TestCase):
             date=date(year=self.month.year, month=self.month.month, day=random.randint(1, 28)),
         )
 
-        with self.subTest('No type_cat parameter'):
+        with self.subTest("No type_cat parameter"):
             # The default is to only return expense transactions
             expected_results = {
                 trans_expense.category.id: {
                     "name": trans_expense.category.name,
                     "total": Decimal(trans_expense.amount).quantize(self.DECIMAL_01),
-                    "children": []
+                    "children": [],
                 },
             }
             expected_sum_total = trans_expense.amount
@@ -215,13 +215,12 @@ class GetTransactionsRegularTotalsTestCase(TestCase):
             self.assertEqual(expected_results, results)
             self.assertEqual(expected_sum_total, total)
 
-        with self.subTest('With type_cat parameter'):
+        with self.subTest("With type_cat parameter"):
             # Get only the expense transactions
 
             # Get the results
             results, total = utils.get_transactions_regular_totals(
-                self.month,
-                type_cat=trans_expense.category.type_cat
+                self.month, type_cat=trans_expense.category.type_cat
             )
             # Verify results. Expected categories and totals are the same as the
             # previous subtest.
@@ -233,23 +232,22 @@ class GetTransactionsRegularTotalsTestCase(TestCase):
                 trans_earning.category.id: {
                     "name": trans_earning.category.name,
                     "total": Decimal(trans_earning.amount).quantize(self.DECIMAL_01),
-                    "children": []
+                    "children": [],
                 },
             }
             expected_sum_total = trans_earning.amount
             # Get the results
             results, total = utils.get_transactions_regular_totals(
-                self.month,
-                type_cat=trans_earning.category.type_cat
+                self.month, type_cat=trans_earning.category.type_cat
             )
             # Verify results
             self.assertEqual(expected_results, results)
             self.assertEqual(expected_sum_total, total)
 
-        with self.subTest('Invalid type_cat parameter'):
+        with self.subTest("Invalid type_cat parameter"):
             # Passing an invalid type_cat raises an error
             with self.assertRaises(ValidationError):
-                utils.get_transactions_regular_totals(type_cat='not a valid type_cat')
+                utils.get_transactions_regular_totals(type_cat="not a valid type_cat")
 
     def test_correct_totals_no_children(self):
         """Verify correct totals for transactions in Categories, with no children."""
@@ -272,7 +270,11 @@ class GetTransactionsRegularTotalsTestCase(TestCase):
         factories.ExpenseTransactionFactory(
             category=self.category_b,
             amount=30,
-            date=date(year=self.month.year + 1, month=self.month.month, day=random.randint(1, 28)),
+            date=date(
+                year=self.month.year + 1,
+                month=self.month.month,
+                day=random.randint(1, 28),
+            ),
         )
         # A transaction of a different type
         factories.EarningTransactionFactory(
@@ -285,12 +287,12 @@ class GetTransactionsRegularTotalsTestCase(TestCase):
             self.category_a.id: {
                 "name": self.category_a.name,
                 "total": Decimal(trans_a1.amount + trans_a2.amount).quantize(self.DECIMAL_01),
-                "children": []
+                "children": [],
             },
             self.category_b.id: {
                 "name": self.category_b.name,
                 "total": Decimal(trans_b1.amount).quantize(self.DECIMAL_01),
-                "children": []
+                "children": [],
             },
         }
         expected_sum_total = sum([trans_a1.amount, trans_a2.amount, trans_b1.amount])
@@ -353,7 +355,11 @@ class GetTransactionsRegularTotalsTestCase(TestCase):
         factories.ExpenseTransactionFactory(
             category=self.category_b,
             amount=30,
-            date=date(year=self.month.year + 1, month=self.month.month, day=random.randint(1, 28)),
+            date=date(
+                year=self.month.year + 1,
+                month=self.month.month,
+                day=random.randint(1, 28),
+            ),
         )
         # A transaction of a different type
         factories.EarningTransactionFactory(
@@ -384,7 +390,7 @@ class GetTransactionsRegularTotalsTestCase(TestCase):
                         "name": self.category_a.name,
                         "total": Decimal(trans_a.amount).quantize(self.DECIMAL_01),
                     },
-                ]
+                ],
             },
             category_all_b_parent.id: {
                 "name": category_all_b_parent.name,
@@ -394,8 +400,8 @@ class GetTransactionsRegularTotalsTestCase(TestCase):
                         "name": self.category_b.name,
                         "total": Decimal(trans_b.amount).quantize(self.DECIMAL_01),
                     },
-                ]
-            }
+                ],
+            },
         }
         expected_sum_total = sum([category_all_a_parent_total, category_all_b_parent_total])
 
@@ -408,9 +414,10 @@ class GetTransactionsRegularTotalsTestCase(TestCase):
 
 class GetOrCreateMonthForDateObjTestCase(TestCase):
     """Test case for the get_or_create_month_for_date_obj() function."""
+
     def test_month_exists(self):
         """If a Month for the date already exists, then it is returned."""
-        month = factories.MonthFactory(year=2017, month=9, name='September, 2017')
+        month = factories.MonthFactory(year=2017, month=9, name="September, 2017")
         date_obj = date(year=month.year, month=month.month, day=1)
         # Get the Month.
         returned_month = utils.get_or_create_month_for_date_obj(date_obj)
@@ -428,13 +435,20 @@ class GetOrCreateMonthForDateObjTestCase(TestCase):
 
     def test_invalid_date_obj(self):
         """Test passing invalid date_obj values."""
-        for invalid_value in ["2020-01-01", "", None, [], {"something": "something else"}]:
+        for invalid_value in [
+            "2020-01-01",
+            "",
+            None,
+            [],
+            {"something": "something else"},
+        ]:
             with self.assertRaises(AttributeError):
                 utils.get_or_create_month_for_date_obj(invalid_value)
 
 
 class CreateUniqueSlugTestCase(TestCase):
     """Test case for the create_unique_slug() function."""
+
     def test_expense_transactions(self):
         """Test the create_unique_slug() function for ExpenseTransactions."""
         category = factories.CategoryFactory(
@@ -470,7 +484,7 @@ class CreateUniqueSlugTestCase(TestCase):
         """Test the create_unique_slug() function for EarningTransactions."""
         category = factories.CategoryFactory(
             type_cat=models.Category.TYPE_EARNING,
-            total_type=models.Category.TOTAL_TYPE_REGULAR
+            total_type=models.Category.TOTAL_TYPE_REGULAR,
         )
         # Create an EarningTransaction.
         earning_transaction1 = factories.EarningTransactionFactory.build(
@@ -499,6 +513,12 @@ class CreateUniqueSlugTestCase(TestCase):
 
     def test_invalid_inputs(self):
         """Test passing invalid input values."""
-        for invalid_value in ["not a transaction", "", None, [], {"something": "something else"}]:
+        for invalid_value in [
+            "not a transaction",
+            "",
+            None,
+            [],
+            {"something": "something else"},
+        ]:
             with self.assertRaises(AttributeError):
                 utils.create_unique_slug_for_transaction(invalid_value)

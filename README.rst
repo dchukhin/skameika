@@ -58,6 +58,12 @@ necessary requirements::
     (skameika)$ pip install -r requirements/dev.txt
     (skameika)$ npm install
 
+Next, install pre-commit::
+
+    $ pre-commit clean
+    $ pre-commit install
+
+
 Next, we'll set up our local environment variables. We use `django-dotenv
 <https://github.com/jpadilla/django-dotenv>`_ to help with this. It reads environment variables
 located in a file name ``.env`` in the top level directory of the project. The only variable we need
