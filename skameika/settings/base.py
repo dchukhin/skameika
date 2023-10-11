@@ -88,6 +88,16 @@ DATABASES = {
     }
 }
 
+if os.getenv("DATABASE_URL"):
+    import dj_database_url
+
+    db_from_env = dj_database_url.config(
+        conn_max_age=500,
+        ssl_require=os.getenv("DATABASE_SSL", False),
+    )
+    DATABASES["default"].update(db_from_env)
+
+
 # Absolute filesystem path to the directory that will hold user-uploaded files.
 # Example: "/home/media/media.lawrence.com/media/"
 MEDIA_ROOT = os.path.join(PROJECT_ROOT, "public", "media")
