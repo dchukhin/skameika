@@ -92,6 +92,18 @@ Any changes made to Python, Javascript or Less files will be detected and rebuil
 long as the development server is running.
 
 
+Database Reset
+--------------
+
+To create a database dump, use the ``pg_dump`` command::
+
+    (skameika)$ pg_dump --no-owner --no-privileges --clean --exclude-table-data django_session skameika --file db.dump
+
+To load the database dump into a fresh database, use the ``psql`` command::
+
+    (skameika)$ psql --dbname skameika --file db.dump
+
+
 Deployment
 ----------
 
