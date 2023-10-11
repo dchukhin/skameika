@@ -78,7 +78,9 @@ class CreateMonthlyStatisticsForMonthTestCase(TestCase):
 
     def test_no_amount_defaults_to_0(self):
         """Not passing an 'amount' means that the amount defaults to 0.00."""
+        # Create a Month, and a statistic.
         month = factories.MonthFactory()
+        factories.StatisticFactory()
         # There are currently no MonthlyStatistics for the Month.
         self.assertFalse(models.MonthlyStatistic.objects.filter(month=month).exists())
 
