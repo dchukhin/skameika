@@ -1,0 +1,154 @@
+import csv
+import logging
+from datetime import datetime
+from django.core.exceptions import ObjectDoesNotExist
+from django.utils.text import slugify
+
+from data_tools.models import CSVImport
+from occurrence.models import ExpenseTransaction, EarningTransaction, Category, Month
+
+
+logger = logging.getLogger(__name__)
+
+
+def parse_date(date_string):
+    """
+    Convert a date string into a date object.
+
+    Supports the following formats:
+    - "YYYY-MM-DD"
+    - "MM/DD/YYYY"
+
+    Args:
+        date_string (str): The date string to convert.
+
+    Returns:
+        date: The corresponding date object.
+
+    Raises:
+        ValueError: If the date string is in an invalid format.
+    """
+    for fmt in ("%Y-%m-%d", "%m/%d/%Y"):
+        try:
+            return datetime.strptime(date_string, fmt).date()
+        except ValueError:
+            continue
+    raise ValueError(f"Invalid date format: {date_string}")
+
+
+def ingest_csv(csv_import):
+    """
+    Ingest a CSV file. See example.csv for an example.
+    """
+    TYPE_EARNING = "earning"
+    TYPE_EXPENSE = "expense"
+
+    expense_transactions = []
+    earning_transactions = []
+    errors = []
+
+    with csv_import.file.open(mode="r") as csvfile:
+        reader = csv.DictReader(csvfile)
+        for index, row in enumerate(reader):
+            amount = float(row["Amount"])
+
+            # Convert the date string to a date object
+            try:
+                transaction_date = parse_date(row["Transaction Date"])
+            except ValueError:
+                error_msg = f"Invalid date format for row: {row}. Skipping."
+                errors.append(error_msg)
+                logger.error(error_msg)
+                continue
+            else:
+                month, _ = Month.objects.get_or_create(
+                    month=transaction_date.month,
+                    year=transaction_date.year,
+                    name=transaction_date.strftime("%B, %Y"),
+                    slug=slugify(transaction_date.strftime("%B, %Y")),
+                )
+
+            transaction_type = row["Type"].strip().lower()
+
+            if transaction_type.lower() == "income":
+                expense_or_earning = TYPE_EARNING
+            else:
+                expense_or_earning = TYPE_EXPENSE
+
+            # Determine the category based on the provided name
+            default_category_name = "Uncategorized"
+            category = None
+            try:
+                category = Category.objects.get(name__iexact=row["Category"])
+            except ObjectDoesNotExist:
+                categories = Category.objects.filter(
+                    name__icontains=default_category_name
+                )
+                if categories.count() > 1:
+                    category = categories.filter(
+                        name__icontains=expense_or_earning
+                    ).first()
+                if not category:
+                    category = categories.first()
+
+            # Check if the transaction already exists based on title, amount, and date
+            if transaction_type.lower() == "income":
+                existing_transaction = EarningTransaction.objects.filter(
+                    title=row["Description"], amount=amount, date=transaction_date
+                ).first()
+                if existing_transaction:
+                    logger.info(
+                        f"Transaction '{row['Description']}' already exists. Skipping."
+                    )
+                    continue
+
+                # Create a new EarningTransaction
+                earning_transactions.append(
+                    EarningTransaction(
+                        title=row["Description"],
+                        slug=f"{slugify(row['Description'])}-{transaction_date.strftime('%Y-%m-%d')}-{index}",
+                        amount=amount,
+                        month=month,
+                        category=category,
+                        csv_import=csv_import,
+                        pending=True,
+                        date=transaction_date,
+                    )
+                )
+            else:
+                existing_transaction = ExpenseTransaction.objects.filter(
+                    title=row["Description"], amount=amount, date=transaction_date
+                ).first()
+                if existing_transaction:
+                    logger.info(
+                        f"Transaction '{row['Description']}' already exists. Skipping."
+                    )
+                    continue
+
+                # Create a new ExpenseTransaction
+                expense_transactions.append(
+                    ExpenseTransaction(
+                        title=row["Description"],
+                        slug=f"{slugify(row['Description'])}-{transaction_date.strftime('%Y-%m-%d')}-{index}",
+                        amount=amount,
+                        month=month,
+                        category=category,
+                        csv_import=csv_import,
+                        pending=True,
+                        date=transaction_date,
+                    )
+                )
+
+    count_transactions_created = 0
+    if not errors:
+        expense_transactions_created = ExpenseTransaction.objects.bulk_create(
+            expense_transactions
+        )
+        earning_transactions_created = EarningTransaction.objects.bulk_create(
+            earning_transactions
+        )
+        count_transactions_created = len(expense_transactions_created) + len(
+            earning_transactions_created
+        )
+
+    return count_transactions_created, errors
