@@ -118,18 +118,15 @@ class TransactionBase(models.Model):
             # month, day)
             potential_slug = "{}-{}".format(slugify(self.title), self.date.strftime("%Y-%m-%d"))
             # Does a Transaction with this slug already exist?
-            if self.__class__.objects.filter(slug=potential_slug).exists():
-                # Find all the slugs that are similar to this potential_slug
-                similar_slugs = self.__class__.objects.filter(
-                    slug__icontains=potential_slug
-                ).values_list("slug")
-                potential_slug += "_2"
-                i = 2
-                # Continue to increase the number at the end of potential_slug until
-                # we get a unique slug
-                while potential_slug in similar_slugs:
-                    potential_slug = potential_slug[0:-1] + str(i)
-                    i += 1
+            count_slugs_same_beginning = self.__class__.objects.filter(
+                slug__startswith=potential_slug
+            ).count()
+            if count_slugs_same_beginning > 0:
+                # The new slug will have a suffix 1 greater than the number of
+                # slugs that begin with potential_slug.
+                suffix = f"_{count_slugs_same_beginning + 1}"
+                potential_slug += suffix
+
             # This is a unique slug, so set it to self.slug
             self.slug = potential_slug
 
