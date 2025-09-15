@@ -9,6 +9,7 @@ from django.utils.dateparse import parse_date
 from django.utils.text import slugify
 from django.views.decorators.http import require_http_methods
 
+from data_tools.models import CSVImport
 from . import forms, models, utils
 
 
@@ -173,14 +174,23 @@ def edit_transaction(request, type_cat, id):
 
 
 @require_http_methods(["GET"])
+def csv_import_list(request):
+    """Show a list of all CSVImport objects."""
+    csv_imports = CSVImport.objects.all().order_by("-created_at")
+
+    context = {
+        "csv_imports": csv_imports,
+    }
+    return render(request, "occurrence/csv_import_list.html", context)
+
+
+@require_http_methods(["GET"])
 def csv_import_transactions(request, csv_import_id):
     """Show all transactions for a specific CSVImport."""
     if not csv_import_id:
         raise Http404("CSV Import ID is required")
 
     # Get the CSVImport object
-    from data_tools.models import CSVImport
-
     csv_import = get_object_or_404(CSVImport, pk=csv_import_id)
 
     # Get transactions filtered by CSV import

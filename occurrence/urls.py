@@ -18,4 +18,9 @@ urlpatterns = [
     re_path(r"copy_transactions/$", views.copy_transactions, name="copy_transactions"),
     re_path(r"^totals/$", views.totals, name="totals"),
     re_path(r"^running_totals/$", views.running_total_categories, name="running_totals"),
+    re_path(
+        r"^imports/$",
+        views.csv_import_list,
+        name="csv_import_list",
+    ),
 ]

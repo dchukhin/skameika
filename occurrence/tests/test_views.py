@@ -944,3 +944,88 @@ class TestCSVImportTransactionsView(TestCase):
         with self.subTest("using DELETE"):
             response = self.client.delete(url)
             self.assertEqual(response.status_code, 405)
+
+
+class TestCSVImportListView(TestCase):
+    url_name = "csv_import_list"
+    template_name = "occurrence/csv_import_list.html"
+
+    def setUp(self):
+        super().setUp()
+        self.url = reverse(self.url_name)
+
+    def test_get_empty_list(self):
+        """GET the view when no CSV imports exist."""
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, self.template_name)
+        self.assertEqual(len(response.context["csv_imports"]), 0)
+
+    def test_get_with_csv_imports(self):
+        """GET the view with multiple CSV imports."""
+        # Create CSV imports with different creation times
+        csv_import1 = CSVImport.objects.create(file="import1.csv")
+        csv_import2 = CSVImport.objects.create(file="import2.csv")
+        csv_import3 = CSVImport.objects.create(file="import3.csv")
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, self.template_name)
+
+        # Check that all CSV imports are in the context
+        csv_imports = list(response.context["csv_imports"])
+        self.assertEqual(len(csv_imports), 3)
+
+        # Check that they are ordered by creation time (most recent first)
+        # Since they were created in sequence, csv_import3 should be first
+        self.assertEqual(csv_imports[0], csv_import3)
+        self.assertEqual(csv_imports[1], csv_import2)
+        self.assertEqual(csv_imports[2], csv_import1)
+
+    def test_csv_imports_ordered_by_created_at_desc(self):
+        """CSV imports should be ordered by created_at in descending order."""
+        from django.utils import timezone
+        from datetime import timedelta
+
+        now = timezone.now()
+
+        # Create CSV imports with specific creation times
+        csv_import_oldest = CSVImport.objects.create(file="oldest.csv")
+        csv_import_oldest.created_at = now - timedelta(days=2)
+        csv_import_oldest.save()
+
+        csv_import_middle = CSVImport.objects.create(file="middle.csv")
+        csv_import_middle.created_at = now - timedelta(days=1)
+        csv_import_middle.save()
+
+        csv_import_newest = CSVImport.objects.create(file="newest.csv")
+        csv_import_newest.created_at = now
+        csv_import_newest.save()
+
+        response = self.client.get(self.url)
+        csv_imports = list(response.context["csv_imports"])
+
+        # Should be ordered newest first
+        self.assertEqual(csv_imports[0], csv_import_newest)
+        self.assertEqual(csv_imports[1], csv_import_middle)
+        self.assertEqual(csv_imports[2], csv_import_oldest)
+
+    def test_invalid_methods(self):
+        """Only GET requests should be allowed."""
+        with self.subTest("using POST"):
+            response = self.client.post(self.url)
+            self.assertEqual(response.status_code, 405)
+
+        with self.subTest("using PUT"):
+            response = self.client.put(self.url)
+            self.assertEqual(response.status_code, 405)
+
+        with self.subTest("using PATCH"):
+            response = self.client.patch(self.url)
+            self.assertEqual(response.status_code, 405)
+
+        with self.subTest("using DELETE"):
+            response = self.client.delete(self.url)
+            self.assertEqual(response.status_code, 405)
