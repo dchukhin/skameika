@@ -52,6 +52,11 @@ class IngestCSVTest(TestCase):
         # Check the returned values.
         self.assertEqual(count_transactions_created, 3)
         self.assertEqual(errors, [])
+
+        # Check that the CSVImport object was updated with row counts
+        self.csv_import.refresh_from_db()
+        self.assertEqual(self.csv_import.rows_created, 3)
+        self.assertEqual(self.csv_import.rows_skipped, 0)
         # Check that the transactions were created
         self.assertEqual(ExpenseTransaction.objects.count(), 2)
         self.assertEqual(EarningTransaction.objects.count(), 1)
@@ -123,6 +128,11 @@ class IngestCSVTest(TestCase):
             "Skipping."
         )
         self.assertEqual(errors, [expected_error_msg])
+
+        # Check that the CSVImport object was updated with row counts
+        self.csv_import.refresh_from_db()
+        self.assertEqual(self.csv_import.rows_created, 0)
+        self.assertEqual(self.csv_import.rows_skipped, 1)
         # Check that no transactions were created
         self.assertEqual(ExpenseTransaction.objects.count(), 0)
         self.assertEqual(EarningTransaction.objects.count(), 0)
@@ -147,6 +157,11 @@ class IngestCSVTest(TestCase):
         self.assertEqual(errors1, [])
         self.assertEqual(count_transactions_created2, 0)
         self.assertEqual(errors2, [])
+
+        # Check that the CSVImport object was updated with row counts from the second run
+        self.csv_import.refresh_from_db()
+        self.assertEqual(self.csv_import.rows_created, 0)  # No new transactions created on second run
+        self.assertEqual(self.csv_import.rows_skipped, 3)  # All 3 rows were skipped as duplicates
         # Check that the duplicate transactions were not created.
         self.assertEqual(ExpenseTransaction.objects.count(), 2)
         self.assertEqual(EarningTransaction.objects.count(), 1)

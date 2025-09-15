@@ -46,6 +46,7 @@ def ingest_csv(csv_import):
     expense_transactions = []
     earning_transactions = []
     errors = []
+    rows_skipped = 0
 
     with csv_import.file.open(mode="r") as csvfile:
         reader = csv.DictReader(csvfile)
@@ -59,6 +60,7 @@ def ingest_csv(csv_import):
                 error_msg = f"Invalid date format for row: {row}. Skipping."
                 errors.append(error_msg)
                 logger.error(error_msg)
+                rows_skipped += 1
                 continue
             else:
                 month, _ = Month.objects.get_or_create(
@@ -100,6 +102,7 @@ def ingest_csv(csv_import):
                     logger.info(
                         f"Transaction '{row['Description']}' already exists. Skipping."
                     )
+                    rows_skipped += 1
                     continue
 
                 # Create a new EarningTransaction
@@ -123,6 +126,7 @@ def ingest_csv(csv_import):
                     logger.info(
                         f"Transaction '{row['Description']}' already exists. Skipping."
                     )
+                    rows_skipped += 1
                     continue
 
                 # Create a new ExpenseTransaction
@@ -150,5 +154,10 @@ def ingest_csv(csv_import):
         count_transactions_created = len(expense_transactions_created) + len(
             earning_transactions_created
         )
+
+    # Update the CSVImport object with the row counts
+    csv_import.rows_created = count_transactions_created
+    csv_import.rows_skipped = rows_skipped
+    csv_import.save(update_fields=["rows_created", "rows_skipped"])
 
     return count_transactions_created, errors

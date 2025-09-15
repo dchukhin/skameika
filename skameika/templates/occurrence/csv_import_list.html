@@ -12,6 +12,8 @@
             <tr>
                 <th>File</th>
                 <th>Created At</th>
+                <th>Rows Created</th>
+                <th>Rows Skipped</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -20,6 +22,8 @@
                 <tr>
                     <td>{{ csv_import.file.name }}</td>
                     <td>{{ csv_import.created_at|date:"Y-m-d H:i:s" }}</td>
+                    <td>{{ csv_import.rows_created }}</td>
+                    <td>{{ csv_import.rows_skipped }}</td>
                     <td>
                         <a href="{% url 'csv_import_transactions' csv_import.id %}" class="btn btn-primary btn-sm">
                             View Transactions
