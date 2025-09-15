@@ -3,7 +3,7 @@ import os
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 
-from data_tools.models import CSVImport
+from data_tools.models import CSVImport, TitleMapping
 from data_tools.utils import ingest_csv
 from occurrence.models import (
     Category,
@@ -165,4 +165,60 @@ class IngestCSVTest(TestCase):
         # Check that the duplicate transactions were not created.
         self.assertEqual(ExpenseTransaction.objects.count(), 2)
         self.assertEqual(EarningTransaction.objects.count(), 1)
+
+    def test_title_mapping(self):
+        """Test that title mappings are correctly applied during CSV ingestion."""
+        # Create title mappings
+        TitleMapping.objects.create(
+            source_title="Test Restaurant 1",
+            canonical_title="Restaurant One"
+        )
+        TitleMapping.objects.create(
+            source_title="Test Restaurant 2",
+            canonical_title="Restaurant Two"
+        )
+
+        # Set the (valid) example.csv file as the self.csv_import's file.
+        csv_file_path = os.path.join(os.path.dirname(__file__), "example.csv")
+        with open(csv_file_path, "rb") as the_file:
+            self.csv_import.file = SimpleUploadedFile(
+                "example.csv", the_file.read(), content_type="text/csv"
+            )
+            self.csv_import.save()
+
+        # Ingest the CSV file
+        count_transactions_created, errors = ingest_csv(self.csv_import)
+
+        # Check the returned values
+        self.assertEqual(count_transactions_created, 3)
+        self.assertEqual(errors, [])
+
+        # Check that the CSVImport object was updated with row counts
+        self.csv_import.refresh_from_db()
+        self.assertEqual(self.csv_import.rows_created, 3)
+        self.assertEqual(self.csv_import.rows_skipped, 0)
+
+        # Check that transactions were created with the mapped titles
+        self.assertEqual(ExpenseTransaction.objects.count(), 2)
         self.assertEqual(EarningTransaction.objects.count(), 1)
+
+        # Verify the mapped titles are used
+        self.assertTrue(
+            ExpenseTransaction.objects.filter(title="Restaurant One").exists()
+        )
+        self.assertTrue(
+            ExpenseTransaction.objects.filter(title="Restaurant Two").exists()
+        )
+
+        # Verify original titles are NOT used
+        self.assertFalse(
+            ExpenseTransaction.objects.filter(title="Test Restaurant 1").exists()
+        )
+        self.assertFalse(
+            ExpenseTransaction.objects.filter(title="Test Restaurant 2").exists()
+        )
+
+        # The earning transaction (Company A) should remain unchanged since no mapping exists
+        self.assertTrue(
+            EarningTransaction.objects.filter(title="Company A").exists()
+        )

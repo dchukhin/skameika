@@ -4,11 +4,25 @@ from datetime import datetime
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.text import slugify
 
-from data_tools.models import CSVImport
+from data_tools.models import CSVImport, TitleMapping
 from occurrence.models import ExpenseTransaction, EarningTransaction, Category, Month
 
 
 logger = logging.getLogger(__name__)
+
+
+def get_mapped_title(description, title_mappings):
+    """
+    Get the canonical title for a transaction description using a pre-loaded mapping dictionary.
+
+    Args:
+        description (str): The original transaction description.
+        title_mappings (dict): Dictionary mapping source_title -> canonical_title.
+
+    Returns:
+        str: The canonical title if a mapping exists, otherwise the original description.
+    """
+    return title_mappings.get(description, description)
 
 
 def parse_date(date_string):
@@ -42,6 +56,11 @@ def ingest_csv(csv_import):
     """
     TYPE_EARNING = "earning"
     TYPE_EXPENSE = "expense"
+
+    # Load all title mappings into a dictionary for efficient lookup
+    title_mappings = dict(
+        TitleMapping.objects.values_list("source_title", "canonical_title")
+    )
 
     expense_transactions = []
     earning_transactions = []
@@ -93,14 +112,17 @@ def ingest_csv(csv_import):
                 if not category:
                     category = categories.first()
 
+            # Get the mapped title for this transaction
+            mapped_title = get_mapped_title(row["Description"], title_mappings)
+
             # Check if the transaction already exists based on title, amount, and date
             if transaction_type.lower() == "income":
                 existing_transaction = EarningTransaction.objects.filter(
-                    title=row["Description"], amount=amount, date=transaction_date
+                    title=mapped_title, amount=amount, date=transaction_date
                 ).first()
                 if existing_transaction:
                     logger.info(
-                        f"Transaction '{row['Description']}' already exists. Skipping."
+                        f"Transaction '{mapped_title}' already exists. Skipping."
                     )
                     rows_skipped += 1
                     continue
@@ -108,8 +130,8 @@ def ingest_csv(csv_import):
                 # Create a new EarningTransaction
                 earning_transactions.append(
                     EarningTransaction(
-                        title=row["Description"],
-                        slug=f"{slugify(row['Description'])}-{transaction_date.strftime('%Y-%m-%d')}-{index}",
+                        title=mapped_title,
+                        slug=f"{slugify(mapped_title)}-{transaction_date.strftime('%Y-%m-%d')}-{index}",
                         amount=amount,
                         month=month,
                         category=category,
@@ -120,11 +142,11 @@ def ingest_csv(csv_import):
                 )
             else:
                 existing_transaction = ExpenseTransaction.objects.filter(
-                    title=row["Description"], amount=amount, date=transaction_date
+                    title=mapped_title, amount=amount, date=transaction_date
                 ).first()
                 if existing_transaction:
                     logger.info(
-                        f"Transaction '{row['Description']}' already exists. Skipping."
+                        f"Transaction '{mapped_title}' already exists. Skipping."
                     )
                     rows_skipped += 1
                     continue
@@ -132,8 +154,8 @@ def ingest_csv(csv_import):
                 # Create a new ExpenseTransaction
                 expense_transactions.append(
                     ExpenseTransaction(
-                        title=row["Description"],
-                        slug=f"{slugify(row['Description'])}-{transaction_date.strftime('%Y-%m-%d')}-{index}",
+                        title=mapped_title,
+                        slug=f"{slugify(mapped_title)}-{transaction_date.strftime('%Y-%m-%d')}-{index}",
                         amount=amount,
                         month=month,
                         category=category,
