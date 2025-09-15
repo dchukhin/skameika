@@ -3,6 +3,8 @@ from datetime import date
 from django.db import models
 from django.utils.text import slugify
 
+from data_tools.models import CSVImport
+
 
 class Category(models.Model):
     TYPE_EARNING = "income"
@@ -91,6 +93,13 @@ class TransactionBase(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.CharField(max_length=255, blank=True)
     receipt = models.ImageField(upload_to="transaction_receipts/", blank=True)
+    csv_import = models.ForeignKey(
+        CSVImport,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="The CSV import this transaction was created from."
+    )
 
     def __str__(self):
         """Return the title and date of the Transaction."""
