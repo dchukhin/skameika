@@ -3,6 +3,7 @@
 
 {% block content %}
 
+{% if show_new_expense_transaction_form %}
 <h2>New Expense Transaction</h2>
 <form action="" method="POST" class="form">
   {% csrf_token %}
@@ -37,6 +38,7 @@
   </p>
   <button type="submit" class="btn btn-primary">Submit</button>
 </form>
+{% endif %}
 
 <datalist id="expense-choices">
   {% for choice in expense_transaction_choices %}
@@ -78,6 +80,7 @@
   </table>
 </form>
 
+{% if show_new_earning_transaction_form %}
 <h2>New Earning Transaction</h2>
 <form action="" method="POST" class="form">
   {% csrf_token %}
@@ -108,6 +111,7 @@
   </p>
   <button type="submit" class="btn btn-primary">Submit</button>
 </form>
+{% endif %}
 <datalist id="earning-choices">
   {% for choice in earning_transaction_choices %}
     <option value="{{ choice }}">

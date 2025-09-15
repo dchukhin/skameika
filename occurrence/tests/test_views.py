@@ -7,6 +7,7 @@ from django.utils.text import slugify
 
 from .. import models
 from . import factories
+from data_tools.models import CSVImport
 
 
 # class TestTransactionsView(TestCase):
@@ -52,8 +53,12 @@ class TestTotalsView(TestCase):
 
         with self.subTest("Transactions in 1 Category"):
             category1 = factories.CategoryFactory()
-            t1 = factories.ExpenseTransactionFactory(date=date.today(), category=category1)
-            t2 = factories.ExpenseTransactionFactory(date=date.today(), category=category1)
+            t1 = factories.ExpenseTransactionFactory(
+                date=date.today(), category=category1
+            )
+            t2 = factories.ExpenseTransactionFactory(
+                date=date.today(), category=category1
+            )
             exp_total_category1 = t1.amount + t2.amount
             # A month Transactions in 1 Category has 1 category row
             response = self.client.get(self.url_current_month)
@@ -65,7 +70,9 @@ class TestTotalsView(TestCase):
 
         with self.subTest("Transactions in multiple Categories"):
             category2 = factories.CategoryFactory()
-            t3 = factories.ExpenseTransactionFactory(date=date.today(), category=category2)
+            t3 = factories.ExpenseTransactionFactory(
+                date=date.today(), category=category2
+            )
             exp_total_category1 = t1.amount + t2.amount
             exp_total_category2 = t3.amount
 
@@ -106,7 +113,9 @@ class TestTotalsView(TestCase):
     def test_statistics(self):
         """GETting the endpoint returns statistics for the month."""
         # A MonthlyStatistic for the current Month
-        monthly_statistic_current1 = factories.MonthlyStatisticFactory(month=self.current_month)
+        monthly_statistic_current1 = factories.MonthlyStatisticFactory(
+            month=self.current_month
+        )
         # A MonthlyStatistic for the wrong Month
         factories.MonthlyStatisticFactory()
 
@@ -157,7 +166,9 @@ class TestRunningTotalCategoriesTestCase(TestCase):
         running_total_cat2 = factories.CategoryFactory(
             total_type=models.Category.TOTAL_TYPE_RUNNING
         )
-        regular_total_cat = factories.CategoryFactory(total_type=models.Category.TOTAL_TYPE_REGULAR)
+        regular_total_cat = factories.CategoryFactory(
+            total_type=models.Category.TOTAL_TYPE_REGULAR
+        )
 
         response = self.client.get(self.url)
 
@@ -217,13 +228,17 @@ class TestEditTransactionTestCase(TestCase):
             response = self.client.get(self.url_transaction_expense)
             self.assertEqual(response.status_code, 200)
             self.assertTemplateUsed(response, self.template_name)
-            self.assertEqual(response.context["form"].Meta.model, models.ExpenseTransaction)
+            self.assertEqual(
+                response.context["form"].Meta.model, models.ExpenseTransaction
+            )
 
         with self.subTest("EarningTransaction"):
             response = self.client.get(self.url_transaction_earning)
             self.assertEqual(response.status_code, 200)
             self.assertTemplateUsed(response, self.template_name)
-            self.assertEqual(response.context["form"].Meta.model, models.EarningTransaction)
+            self.assertEqual(
+                response.context["form"].Meta.model, models.EarningTransaction
+            )
 
     def test_post_valid(self):
         """Make a valid POST to update a transaction."""
@@ -265,7 +280,9 @@ class TestEditTransactionTestCase(TestCase):
                 transaction.refresh_from_db()
                 self.assertEqual(transaction.title, new_title)
                 self.assertEqual(transaction.amount, new_amount)
-                self.assertEqual(transaction.date, datetime.strptime(new_date, "%Y-%m-%d").date())
+                self.assertEqual(
+                    transaction.date, datetime.strptime(new_date, "%Y-%m-%d").date()
+                )
 
     def test_post_invalid(self):
         """POSTing invalid data to update a transaction."""
@@ -334,11 +351,15 @@ class TestEditTransactionTestCase(TestCase):
                 }
 
                 data["category"] = self.transaction_expense.category.pk
-                response_expense = self.client.post(invalid_expense_url, data=data, follow=True)
+                response_expense = self.client.post(
+                    invalid_expense_url, data=data, follow=True
+                )
                 self.assertEqual(response_expense.status_code, 404)
 
                 data["category"] = self.transaction_earning.category.pk
-                response_earning = self.client.post(invalid_earning_url, data=data, follow=True)
+                response_earning = self.client.post(
+                    invalid_earning_url, data=data, follow=True
+                )
                 self.assertEqual(response_earning.status_code, 404)
 
     def test_nonexistent_transaction(self):
@@ -496,9 +517,7 @@ class TestCopyTransactionsTestCase(TestCase):
             response = self.client.get(url)
             self.assertEqual(response.status_code, 200)
             self.assertTemplateUsed(response, self.template_name)
-            expected_error = (
-                "You must choose a valid transaction_type (either 'expense' or 'income')."
-            )
+            expected_error = "You must choose a valid transaction_type (either 'expense' or 'income')."
             self.assertEqual(response.context["errors"], [expected_error])
 
         with self.subTest("invalid transaction_type"):
@@ -509,13 +528,13 @@ class TestCopyTransactionsTestCase(TestCase):
             response = self.client.get(url)
             self.assertEqual(response.status_code, 200)
             self.assertTemplateUsed(response, self.template_name)
-            expected_error = (
-                "You must choose a valid transaction_type (either 'expense' or 'income')."
-            )
+            expected_error = "You must choose a valid transaction_type (either 'expense' or 'income')."
             self.assertEqual(response.context["errors"], [expected_error])
 
         with self.subTest("no selected_transactions"):
-            url = reverse(self.url_name) + (f"?transaction_type={models.Category.TYPE_EXPENSE}")
+            url = reverse(self.url_name) + (
+                f"?transaction_type={models.Category.TYPE_EXPENSE}"
+            )
             response = self.client.get(url)
             self.assertEqual(response.status_code, 200)
             self.assertTemplateUsed(response, self.template_name)
@@ -524,7 +543,8 @@ class TestCopyTransactionsTestCase(TestCase):
 
         with self.subTest("invalid selected_transactions"):
             url = reverse(self.url_name) + (
-                f"?transaction_type={models.Category.TYPE_EXPENSE}" f"&selected_transactions=a"
+                f"?transaction_type={models.Category.TYPE_EXPENSE}"
+                f"&selected_transactions=a"
             )
             response = self.client.get(url)
             self.assertEqual(response.status_code, 200)
@@ -568,8 +588,12 @@ class TestCopyTransactionsTestCase(TestCase):
         # The date string that will be used in this test.
         new_date_str = "2020-01-01"
         # Currently, no transactions exist for the new_date_str.
-        self.assertEqual(models.ExpenseTransaction.objects.filter(date=new_date_str).count(), 0)
-        self.assertEqual(models.EarningTransaction.objects.filter(date=new_date_str).count(), 0)
+        self.assertEqual(
+            models.ExpenseTransaction.objects.filter(date=new_date_str).count(), 0
+        )
+        self.assertEqual(
+            models.EarningTransaction.objects.filter(date=new_date_str).count(), 0
+        )
 
         data = {"date": new_date_str}
 
@@ -620,8 +644,12 @@ class TestCopyTransactionsTestCase(TestCase):
             new_transaction2 = models.ExpenseTransaction.objects.get(
                 date=new_date_str, title=self.transaction_expense2.title
             )
-            self.assert_transactions_have_same_data(self.transaction_expense1, new_transaction1)
-            self.assert_transactions_have_same_data(self.transaction_expense2, new_transaction2)
+            self.assert_transactions_have_same_data(
+                self.transaction_expense1, new_transaction1
+            )
+            self.assert_transactions_have_same_data(
+                self.transaction_expense2, new_transaction2
+            )
 
         with self.subTest("EarningTransactions"):
             data["transaction_type"] = models.Category.TYPE_EARNING
@@ -633,7 +661,9 @@ class TestCopyTransactionsTestCase(TestCase):
             expected_redirect_url = reverse("transactions")
             self.assertRedirects(response, expected_redirect_url)
             # One new transaction has been created.
-            self.assertEqual(models.EarningTransaction.objects.filter(date=new_date_str).count(), 1)
+            self.assertEqual(
+                models.EarningTransaction.objects.filter(date=new_date_str).count(), 1
+            )
             # There are now 2 transactions with the title that self.transaction_earning1 has.
             self.assertEqual(
                 models.EarningTransaction.objects.filter(
@@ -660,15 +690,21 @@ class TestCopyTransactionsTestCase(TestCase):
             new_transaction1 = models.EarningTransaction.objects.get(
                 date=new_date_str, title=self.transaction_earning1.title
             )
-            self.assert_transactions_have_same_data(self.transaction_earning1, new_transaction1)
+            self.assert_transactions_have_same_data(
+                self.transaction_earning1, new_transaction1
+            )
 
     def test_post_invalid(self):
         """Make an invalid POST to copy transactions."""
         # The date string that will be used in this test.
         new_date_str = "2020-01-01"
         # Currently, no transactions exist for the new_date_str.
-        self.assertEqual(models.ExpenseTransaction.objects.filter(date=new_date_str).count(), 0)
-        self.assertEqual(models.EarningTransaction.objects.filter(date=new_date_str).count(), 0)
+        self.assertEqual(
+            models.ExpenseTransaction.objects.filter(date=new_date_str).count(), 0
+        )
+        self.assertEqual(
+            models.EarningTransaction.objects.filter(date=new_date_str).count(), 0
+        )
 
         data = {"date": new_date_str}
 
@@ -682,13 +718,15 @@ class TestCopyTransactionsTestCase(TestCase):
 
             self.assertEqual(response.status_code, 200)
             self.assertTemplateUsed(response, self.template_name)
-            expected_error = (
-                "You must choose a valid transaction_type (either 'expense' or 'income')."
-            )
+            expected_error = "You must choose a valid transaction_type (either 'expense' or 'income')."
             self.assertEqual(response.context["errors"], [expected_error])
             # No transactions were created.
-            self.assertEqual(models.ExpenseTransaction.objects.count(), count_expense_transactions)
-            self.assertEqual(models.EarningTransaction.objects.count(), count_earning_transactions)
+            self.assertEqual(
+                models.ExpenseTransaction.objects.count(), count_expense_transactions
+            )
+            self.assertEqual(
+                models.EarningTransaction.objects.count(), count_earning_transactions
+            )
 
         with self.subTest("invalid transaction_type"):
             data["transaction_type"] = "not a valid transaction_type"
@@ -697,13 +735,15 @@ class TestCopyTransactionsTestCase(TestCase):
             response = self.client.post(reverse(self.url_name), data)
             self.assertEqual(response.status_code, 200)
             self.assertTemplateUsed(response, self.template_name)
-            expected_error = (
-                "You must choose a valid transaction_type (either 'expense' or 'income')."
-            )
+            expected_error = "You must choose a valid transaction_type (either 'expense' or 'income')."
             self.assertEqual(response.context["errors"], [expected_error])
             # No transactions were created.
-            self.assertEqual(models.ExpenseTransaction.objects.count(), count_expense_transactions)
-            self.assertEqual(models.EarningTransaction.objects.count(), count_expense_transactions)
+            self.assertEqual(
+                models.ExpenseTransaction.objects.count(), count_expense_transactions
+            )
+            self.assertEqual(
+                models.EarningTransaction.objects.count(), count_expense_transactions
+            )
 
         with self.subTest("no selected_transactions"):
             data["transaction_type"] = models.Category.TYPE_EARNING
@@ -715,8 +755,12 @@ class TestCopyTransactionsTestCase(TestCase):
             expected_redirect_url = reverse("transactions")
             self.assertRedirects(response, expected_redirect_url)
             # No transactions were created.
-            self.assertEqual(models.ExpenseTransaction.objects.count(), count_expense_transactions)
-            self.assertEqual(models.EarningTransaction.objects.count(), count_expense_transactions)
+            self.assertEqual(
+                models.ExpenseTransaction.objects.count(), count_expense_transactions
+            )
+            self.assertEqual(
+                models.EarningTransaction.objects.count(), count_expense_transactions
+            )
 
         with self.subTest("invalid selected_transactions"):
             data["transaction_type"] = models.Category.TYPE_EARNING
@@ -731,8 +775,12 @@ class TestCopyTransactionsTestCase(TestCase):
                 ["The selected transaction ids must be integers."],
             )
             # No transactions were created.
-            self.assertEqual(models.ExpenseTransaction.objects.count(), count_expense_transactions)
-            self.assertEqual(models.EarningTransaction.objects.count(), count_expense_transactions)
+            self.assertEqual(
+                models.ExpenseTransaction.objects.count(), count_expense_transactions
+            )
+            self.assertEqual(
+                models.EarningTransaction.objects.count(), count_expense_transactions
+            )
 
         with self.subTest("non-existent selected_transactions"):
             data["transaction_type"] = models.Category.TYPE_EARNING
@@ -747,8 +795,12 @@ class TestCopyTransactionsTestCase(TestCase):
                 ["One or more of the selected transactions does not exist."],
             )
             # No transactions were created.
-            self.assertEqual(models.ExpenseTransaction.objects.count(), count_expense_transactions)
-            self.assertEqual(models.EarningTransaction.objects.count(), count_expense_transactions)
+            self.assertEqual(
+                models.ExpenseTransaction.objects.count(), count_expense_transactions
+            )
+            self.assertEqual(
+                models.EarningTransaction.objects.count(), count_expense_transactions
+            )
 
         with self.subTest("an existent and a non-existent selected_transactions"):
             data["transaction_type"] = models.Category.TYPE_EARNING
@@ -766,8 +818,12 @@ class TestCopyTransactionsTestCase(TestCase):
                 ["One or more of the selected transactions does not exist."],
             )
             # No transactions were created.
-            self.assertEqual(models.ExpenseTransaction.objects.count(), count_expense_transactions)
-            self.assertEqual(models.EarningTransaction.objects.count(), count_expense_transactions)
+            self.assertEqual(
+                models.ExpenseTransaction.objects.count(), count_expense_transactions
+            )
+            self.assertEqual(
+                models.EarningTransaction.objects.count(), count_expense_transactions
+            )
 
         with self.subTest("invalid date"):
             data["transaction_type"] = models.Category.TYPE_EARNING
@@ -778,7 +834,113 @@ class TestCopyTransactionsTestCase(TestCase):
 
             self.assertEqual(response.status_code, 200)
             self.assertTemplateUsed(response, self.template_name)
-            expected_error = (
-                f"You must choose a date in the appropriate format. '{data['date']}' is not valid."
-            )
+            expected_error = f"You must choose a date in the appropriate format. '{data['date']}' is not valid."
             self.assertEqual(response.context["errors"], [expected_error])
+
+
+class TestCSVImportTransactionsView(TestCase):
+    url_name = "csv_import_transactions"
+    template_name = "occurrence/transactions.html"
+
+    def setUp(self):
+        super().setUp()
+        # Create a CSV import
+        self.csv_import = CSVImport.objects.create(file="test.csv")
+
+        # Create transactions with and without CSV import
+        self.expense_transaction_with_import = factories.ExpenseTransactionFactory(
+            csv_import=self.csv_import
+        )
+        self.earning_transaction_with_import = factories.EarningTransactionFactory(
+            csv_import=self.csv_import
+        )
+
+        # Transactions without CSV import (should not appear in results)
+        self.expense_transaction_without_import = factories.ExpenseTransactionFactory(
+            csv_import=None
+        )
+        self.earning_transaction_without_import = factories.EarningTransactionFactory(
+            csv_import=None
+        )
+
+        self.url = reverse(self.url_name, kwargs={"csv_import_id": self.csv_import.id})
+
+    def test_get_with_valid_csv_import_id(self):
+        """GET the view with a valid CSV import ID."""
+        url = reverse(self.url_name, kwargs={"csv_import_id": self.csv_import.id})
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, self.template_name)
+
+        # Check context contains the correct CSV import
+        self.assertEqual(response.context["csv_import"], self.csv_import)
+
+        # Check that transactions with the CSV import are included
+        expense_transactions = list(response.context["expense_transactions"])
+        earning_transactions = list(response.context["earning_transactions"])
+
+        self.assertIn(self.expense_transaction_with_import, expense_transactions)
+        self.assertIn(self.earning_transaction_with_import, earning_transactions)
+
+        # Check that transactions without the CSV import are not included
+        self.assertNotIn(self.expense_transaction_without_import, expense_transactions)
+        self.assertNotIn(self.earning_transaction_without_import, earning_transactions)
+
+        # Check context includes category constants
+        self.assertEqual(
+            response.context["expense_transaction_constant"],
+            models.Category.TYPE_EXPENSE,
+        )
+        self.assertEqual(
+            response.context["earning_transaction_constant"],
+            models.Category.TYPE_EARNING,
+        )
+
+    def test_get_with_invalid_csv_import_id(self):
+        """GET the view with an invalid CSV import ID."""
+        url = reverse(self.url_name, kwargs={"csv_import_id": 99999})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
+
+    def test_get_with_non_numeric_csv_import_id(self):
+        """GET the view with a non-numeric CSV import ID."""
+        # This test may not be applicable if the URL pattern only accepts [0-9]+
+        # But we can test with a string that contains valid characters for [-\w]+
+        url = reverse(self.url_name, kwargs={"csv_import_id": "123456789"}).replace(
+            "123456789", "invalid"
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
+
+    def test_empty_results(self):
+        """GET the view for a CSV import with no transactions."""
+        empty_csv_import = CSVImport.objects.create(file="empty.csv")
+        url = reverse(self.url_name, kwargs={"csv_import_id": empty_csv_import.id})
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, self.template_name)
+        self.assertEqual(response.context["csv_import"], empty_csv_import)
+        self.assertEqual(len(response.context["expense_transactions"]), 0)
+        self.assertEqual(len(response.context["earning_transactions"]), 0)
+
+    def test_invalid_methods(self):
+        """Only GET requests should be allowed."""
+        url = reverse(self.url_name, kwargs={"csv_import_id": self.csv_import.id})
+
+        with self.subTest("using POST"):
+            response = self.client.post(url)
+            self.assertEqual(response.status_code, 405)
+
+        with self.subTest("using PUT"):
+            response = self.client.put(url)
+            self.assertEqual(response.status_code, 405)
+
+        with self.subTest("using PATCH"):
+            response = self.client.patch(url)
+            self.assertEqual(response.status_code, 405)
+
+        with self.subTest("using DELETE"):
+            response = self.client.delete(url)
+            self.assertEqual(response.status_code, 405)

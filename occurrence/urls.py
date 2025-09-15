@@ -6,6 +6,11 @@ from . import views
 urlpatterns = [
     re_path(r"^transactions/$", views.transactions, name="transactions"),
     re_path(
+        r"^transactions/import/(?P<csv_import_id>[0-9]+)/$",
+        views.csv_import_transactions,
+        name="csv_import_transactions",
+    ),
+    re_path(
         r"edit_transaction/(?P<type_cat>[-\w]+)/(?P<id>[0-9]+)/$",
         views.edit_transaction,
         name="edit_transaction",
