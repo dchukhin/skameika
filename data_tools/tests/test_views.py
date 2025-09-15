@@ -82,8 +82,10 @@ class UploadCSVViewTests(TestCase):
         # Check that 3 Transaction objects were created
         self.assertEqual(ExpenseTransaction.objects.count(), 2)
         self.assertEqual(EarningTransaction.objects.count(), 1)
-        # Check that a Month was created.
-        self.assertEqual(Month.objects.count(), 1)
+        # Check that a Month was created (note: the current Month is also created
+        # when the user is redirected to the transactions list page).
+        self.assertEqual(Month.objects.count(), 2)
+        self.assertEqual(Month.objects.filter(slug="july-2025").count(), 1)
 
     def test_upload_invalid_csv(self):
         response = self.client.post(
