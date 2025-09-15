@@ -93,6 +93,7 @@ class TransactionBase(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.CharField(max_length=255, blank=True)
     receipt = models.ImageField(upload_to="transaction_receipts/", blank=True)
+    pending = models.BooleanField(default=False)
     csv_import = models.ForeignKey(
         CSVImport,
         on_delete=models.SET_NULL,
@@ -160,7 +161,6 @@ class ExpenseTransaction(TransactionBase):
         on_delete=models.CASCADE,
         limit_choices_to={"type_cat": Category.TYPE_EXPENSE},
     )
-    pending = models.BooleanField(default=False)
 
     class Meta:
         ordering = (
