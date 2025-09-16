@@ -114,18 +114,32 @@ class TransactionBaseMixin(object):
             self.assertEqual(self.model_class.objects.count(), 3)
             self.assertNotEqual(transaction3.slug, transaction1.slug)
 
-    def save_slug_already_unique(self):
+    def test_save_slug_already_unique(self):
         """Saving a Transaction with a slug that is already unique keeps its slug."""
-        unique_slug = "uniqueslug"
+        test_date = date(year=2017, month=5, day=1)
+        unique_slug = "transaction-1-2017-05-01"
         # A transaction with a unique slug
-        transaction1 = self.factory(slug=unique_slug)
+        transaction1 = self.factory(slug=unique_slug, title="Transaction 1", date=test_date)
         # A second transaction with the same title and date as transaction1
-        self.factory(title=transaction1.title, date=transaction1.date)
+        self.factory(title=transaction1.title, date=transaction1.date, slug=unique_slug)
 
         # Now saving transaction1 should keep its slug, rather than changing it
         # to something new
         transaction1.save()
         self.assertEqual(transaction1.slug, unique_slug)
+
+        # A third transaction with the same title and date as transaction1.
+        # Creating it does not cause an error.
+        self.factory(title=transaction1.title, date=transaction1.date, slug=unique_slug)
+
+        self.assertEqual(
+            set(transaction1.__class__.objects.values_list("slug", flat=True)),
+            set([
+                "transaction-1-2017-05-01",
+                "transaction-1-2017-05-01_2",
+                "transaction-1-2017-05-01_3",
+            ])
+        )
 
     def test_save_associate_month(self):
         """Saving a Transaction without a Month associates it with correct Month."""

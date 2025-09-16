@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}CSV Imports{% endblock %}
+
+{% block content %}
+<h1>CSV Imports</h1>
+
+{% if csv_imports %}
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>File</th>
+                <th>Created At</th>
+                <th>Rows Created</th>
+                <th>Rows Skipped</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for csv_import in csv_imports %}
+                <tr>
+                    <td>{{ csv_import.file.name }}</td>
+                    <td>{{ csv_import.created_at|date:"Y-m-d H:i:s" }}</td>
+                    <td>{{ csv_import.rows_created }}</td>
+                    <td>{{ csv_import.rows_skipped }}</td>
+                    <td>
+                        <a href="{% url 'csv_import_transactions' csv_import.id %}" class="btn btn-primary btn-sm">
+                            View Transactions
+                        </a>
+                        {% if csv_import.file %}
+                            <a href="{{ csv_import.file.url }}" class="btn btn-secondary btn-sm" download>
+                                Download File
+                            </a>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <div class="alert alert-info">
+        <p>No CSV imports found.</p>
+    </div>
+{% endif %}
+{% endblock content %}

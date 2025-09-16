@@ -9,6 +9,7 @@ from django.utils.dateparse import parse_date
 from django.utils.text import slugify
 from django.views.decorators.http import require_http_methods
 
+from data_tools.models import CSVImport
 from . import forms, models, utils
 
 
@@ -16,7 +17,9 @@ def transactions(request, *args, **kwargs):
     """Show all current transactions."""
     # Get the current_month, either from the request kwargs, or use the today's month
     if request.GET.get("month"):
-        current_month = get_object_or_404(models.Month.objects.all(), slug=request.GET.get("month"))
+        current_month = get_object_or_404(
+            models.Month.objects.all(), slug=request.GET.get("month")
+        )
     else:
         current_month = models.Month.objects.get_or_create(
             year=date.today().year,
@@ -51,6 +54,8 @@ def transactions(request, *args, **kwargs):
         "earning_transaction_choices": earning_transaction_titles,
         "expense_transaction_constant": models.Category.TYPE_EXPENSE,
         "earning_transaction_constant": models.Category.TYPE_EARNING,
+        "show_new_expense_transaction_form": True,
+        "show_new_earning_transaction_form": True,
     }
     if request.method == "POST":
         # Is this for an expense, or an earning?
@@ -120,12 +125,16 @@ def running_total_categories(request):
     categories = models.Category.objects.filter(
         total_type=models.Category.TOTAL_TYPE_RUNNING
     ).annotate(
-        total=Sum(F("expensetransaction__amount") * Value("-1"), output_field=DecimalField()),
+        total=Sum(
+            F("expensetransaction__amount") * Value("-1"), output_field=DecimalField()
+        ),
     )
     # For each Category, attach a queryset of ExpenseTransactions that have a
     # running_total_amount fiels
     for category in categories:
-        category.expense_transactions = utils.get_expensetransactions_running_totals(category)
+        category.expense_transactions = utils.get_expensetransactions_running_totals(
+            category
+        )
 
     context = {"categories": categories}
     return render(request, "occurrence/running_totals.html", context)
@@ -152,7 +161,9 @@ def edit_transaction(request, type_cat, id):
             form.save()
             # Redirect the user to the transactions view for the month that this
             # transaction is in
-            return redirect("{}?month={}".format(reverse("transactions"), transaction.month.slug))
+            return redirect(
+                "{}?month={}".format(reverse("transactions"), transaction.month.slug)
+            )
     else:
         if type_cat == models.Category.TYPE_EXPENSE:
             form = forms.ExpenseTransactionForm(instance=transaction)
@@ -160,6 +171,44 @@ def edit_transaction(request, type_cat, id):
             form = forms.EarningTransactionForm(instance=transaction)
     context = {"form": form, "transaction": transaction, "type_cat": type_cat}
     return render(request, "occurrence/edit_transaction.html", context)
+
+
+@require_http_methods(["GET"])
+def csv_import_list(request):
+    """Show a list of all CSVImport objects."""
+    csv_imports = CSVImport.objects.all().order_by("-created_at")
+
+    context = {
+        "csv_imports": csv_imports,
+    }
+    return render(request, "occurrence/csv_import_list.html", context)
+
+
+@require_http_methods(["GET"])
+def csv_import_transactions(request, csv_import_id):
+    """Show all transactions for a specific CSVImport."""
+    if not csv_import_id:
+        raise Http404("CSV Import ID is required")
+
+    # Get the CSVImport object
+    csv_import = get_object_or_404(CSVImport, pk=csv_import_id)
+
+    # Get transactions filtered by CSV import
+    expense_transactions = models.ExpenseTransaction.objects.filter(
+        csv_import=csv_import
+    ).select_related("category")
+    earning_transactions = models.EarningTransaction.objects.filter(
+        csv_import=csv_import
+    ).select_related("category")
+
+    context = {
+        "expense_transactions": expense_transactions,
+        "earning_transactions": earning_transactions,
+        "csv_import": csv_import,
+        "expense_transaction_constant": models.Category.TYPE_EXPENSE,
+        "earning_transaction_constant": models.Category.TYPE_EARNING,
+    }
+    return render(request, "occurrence/transactions.html", context)
 
 
 @require_http_methods(["GET", "POST"])
@@ -182,9 +231,13 @@ def copy_transactions(request):
         return render(request, "occurrence/copy_transactions.html", context)
 
     if transaction_type == models.Category.TYPE_EXPENSE:
-        transactions = models.ExpenseTransaction.objects.filter(id__in=selected_transaction_ids)
+        transactions = models.ExpenseTransaction.objects.filter(
+            id__in=selected_transaction_ids
+        )
     elif transaction_type == models.Category.TYPE_EARNING:
-        transactions = models.EarningTransaction.objects.filter(id__in=selected_transaction_ids)
+        transactions = models.EarningTransaction.objects.filter(
+            id__in=selected_transaction_ids
+        )
     else:
         error = (
             f"You must choose a valid transaction_type (either '{models.Category.TYPE_EXPENSE}' "
@@ -237,7 +290,11 @@ def copy_transactions(request):
                     description=transaction.description,
                 )
             )
-        num_transactions_created = TransactionModel.objects.bulk_create(new_transactions)
+        num_transactions_created = TransactionModel.objects.bulk_create(
+            new_transactions
+        )
 
-        messages.success(request, f"{len(num_transactions_created)} transaction(s) copied.")
+        messages.success(
+            request, f"{len(num_transactions_created)} transaction(s) copied."
+        )
         return redirect("transactions")

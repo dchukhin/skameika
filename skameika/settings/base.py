@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "django.contrib.humanize",
     "django.contrib.sitemaps",
     "occurrence",
+    "data_tools",
 ]
 
 MIDDLEWARE = [
