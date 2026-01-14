@@ -98,6 +98,29 @@ Any changes made to Python, Javascript or Less files will be detected and rebuil
 long as the development server is running.
 
 
+Automated Accessibility Tests
+-----------------------------
+
+This project has been set up to run automated accessibility tests,
+which require [geckodriver](https://github.com/mozilla/geckodriver/).
+
+To install on Linux:
+
+```
+$ curl -L https://github.com/mozilla/geckodriver/releases/download/v0.30.0/geckodriver-v0.30.0-linux64.tar.gz > geckodriver.tar.gz
+$ tar -zxvf geckodriver.tar.gz
+$ sudo mv geckodriver /usr/local/bin
+```
+
+To install on Mac:
+
+```
+$ brew install geckodriver
+```
+
+The accessibility tests will run as a part of the standard Python tests (``python manage.py test``).
+
+
 Database Reset
 --------------
 

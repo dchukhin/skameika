@@ -10,6 +10,8 @@ flake8==6.1.0
 pyflakes==3.1.0  # constrained by flake8
 pep8==1.7.1
 mccabe==0.7.0
+# For accessibility tests
+selenium-axe-python==2.1.13
 
 # For translation
 transifex-client==0.11b3
