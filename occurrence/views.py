@@ -1,7 +1,7 @@
 from datetime import date
 
 from django.contrib import messages
-from django.db.models import DecimalField, F, Sum, Value
+from django.db.models import DecimalField, F, Q, Sum, Value
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -217,6 +217,49 @@ def csv_import_transactions(request, csv_import_id):
         "earning_transaction_constant": models.Category.TYPE_EARNING,
     }
     return render(request, "occurrence/transactions.html", context)
+
+
+@require_http_methods(["GET"])
+def statistics_chart_view(request):
+    all_statistics = models.Statistic.objects.all()
+    all_months = models.Month.objects.order_by("year", "month")
+
+    statistic_slug = request.GET.get("statistic")
+    start_month_slug = request.GET.get("start_month")
+    end_month_slug = request.GET.get("end_month")
+
+    statistic = None
+    chart_data = []
+
+    if statistic_slug and start_month_slug and end_month_slug:
+        statistic = get_object_or_404(models.Statistic, slug=statistic_slug)
+        start_month = get_object_or_404(models.Month, slug=start_month_slug)
+        end_month = get_object_or_404(models.Month, slug=end_month_slug)
+
+        months_in_range = models.Month.objects.filter(
+            Q(year__gt=start_month.year) |
+            Q(year=start_month.year, month__gte=start_month.month)
+        ).filter(
+            Q(year__lt=end_month.year) |
+            Q(year=end_month.year, month__lte=end_month.month)
+        )
+        monthly_stats = models.MonthlyStatistic.objects.filter(
+            statistic=statistic,
+            month__in=months_in_range,
+        ).select_related("month").order_by("month__year", "month__month")
+
+        chart_data = [
+            {"month": str(ms.month), "amount": float(ms.amount)}
+            for ms in monthly_stats
+        ]
+
+    context = {
+        "all_statistics": all_statistics,
+        "all_months": all_months,
+        "selected_statistic": statistic,
+        "chart_data": chart_data,
+    }
+    return render(request, "occurrence/statistics.html", context)
 
 
 @require_http_methods(["GET", "POST"])

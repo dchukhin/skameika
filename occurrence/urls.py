@@ -23,4 +23,5 @@ urlpatterns = [
         views.csv_import_list,
         name="csv_import_list",
     ),
+    re_path(r"^statistics-chart/$", views.statistics_chart_view, name="statistics_chart_view"),
 ]

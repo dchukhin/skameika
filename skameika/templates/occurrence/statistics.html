@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Statistics{% endblock %}
+
+{% block content %}
+
+<h2>Statistics Over Time</h2>
+
+<form method="get" action="{% url 'statistics_chart_view' %}">
+  <div class="form-group">
+    <label for="statistic">Statistic</label>
+    <select id="statistic" name="statistic" class="form-control">
+      <option value="">---------</option>
+      {% for stat in all_statistics %}
+        <option value="{{ stat.slug }}"{% if selected_statistic and selected_statistic.slug == stat.slug %} selected{% endif %}>{{ stat }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="form-group">
+    <label for="start_month">Start Month</label>
+    <select id="start_month" name="start_month" class="form-control">
+      <option value="">---------</option>
+      {% for month in all_months %}
+        <option value="{{ month.slug }}"{% if request.GET.start_month == month.slug %} selected{% endif %}>{{ month }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="form-group">
+    <label for="end_month">End Month</label>
+    <select id="end_month" name="end_month" class="form-control">
+      <option value="">---------</option>
+      {% for month in all_months %}
+        <option value="{{ month.slug }}"{% if request.GET.end_month == month.slug %} selected{% endif %}>{{ month }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <button type="submit" class="btn btn-primary">Show Chart</button>
+</form>
+
+{% if chart_data %}
+<div style="max-width: 800px; margin: 2em auto;">
+  <canvas id="statistics-chart" data-label="{{ selected_statistic }}"></canvas>
+</div>
+{% endif %}
+
+{{ chart_data|json_script:"statistics-chart-data" }}
+
+{% endblock content %}
+
+{% block extra-js %}
+<script src="{% static 'js/vendor/chart.umd.min.js' %}"></script>
+<script src="{% static 'js/statistics_charts.js' %}"></script>
+{% endblock %}

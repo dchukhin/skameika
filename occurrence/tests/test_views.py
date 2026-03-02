@@ -1029,3 +1029,123 @@ class TestCSVImportListView(TestCase):
         with self.subTest("using DELETE"):
             response = self.client.delete(self.url)
             self.assertEqual(response.status_code, 405)
+
+
+class TestStatisticsChartView(TestCase):
+    url_name = "statistics_chart_view"
+    template_name = "occurrence/statistics.html"
+
+    def setUp(self):
+        super().setUp()
+        self.url = reverse(self.url_name)
+        self.statistic = factories.StatisticFactory()
+        self.month_jan = factories.MonthFactory(year=2023, month=1, name="January, 2023")
+        self.month_feb = factories.MonthFactory(year=2023, month=2, name="February, 2023")
+        self.month_mar = factories.MonthFactory(year=2023, month=3, name="March, 2023")
+
+    def test_get_no_params(self):
+        """GET without params renders the form with no chart data."""
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, self.template_name)
+        self.assertEqual(response.context["chart_data"], [])
+        self.assertIsNone(response.context["selected_statistic"])
+        self.assertContains(response, "<form")
+
+    def test_get_partial_params(self):
+        """GET with only the statistic param (no months) renders no chart."""
+        url = "{}?statistic={}".format(self.url, self.statistic.slug)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["chart_data"], [])
+
+    def test_get_with_all_params(self):
+        """GET with all params returns 200 and chart_data in context."""
+        ms = factories.MonthlyStatisticFactory(
+            statistic=self.statistic, month=self.month_feb
+        )
+        url = "{}?statistic={}&start_month={}&end_month={}".format(
+            self.url,
+            self.statistic.slug,
+            self.month_jan.slug,
+            self.month_mar.slug,
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, self.template_name)
+        self.assertIsNotNone(response.context["chart_data"])
+        months_in_data = [d["month"] for d in response.context["chart_data"]]
+        self.assertIn(str(ms.month), months_in_data)
+
+    def test_get_data_in_range(self):
+        """Only MonthlyStatistics within the date range appear in chart_data."""
+        ms_in = factories.MonthlyStatisticFactory(
+            statistic=self.statistic, month=self.month_feb
+        )
+        url = "{}?statistic={}&start_month={}&end_month={}".format(
+            self.url,
+            self.statistic.slug,
+            self.month_jan.slug,
+            self.month_mar.slug,
+        )
+        response = self.client.get(url)
+        months_in_data = [d["month"] for d in response.context["chart_data"]]
+        self.assertIn(str(ms_in.month), months_in_data)
+
+    def test_get_data_outside_range(self):
+        """MonthlyStatistics outside the date range are absent from chart_data."""
+        month_outside = factories.MonthFactory(year=2022, month=12, name="December, 2022")
+        factories.MonthlyStatisticFactory(
+            statistic=self.statistic, month=month_outside
+        )
+        url = "{}?statistic={}&start_month={}&end_month={}".format(
+            self.url,
+            self.statistic.slug,
+            self.month_jan.slug,
+            self.month_mar.slug,
+        )
+        response = self.client.get(url)
+        months_in_data = [d["month"] for d in response.context["chart_data"]]
+        self.assertNotIn(str(month_outside), months_in_data)
+
+    def test_get_invalid_statistic(self):
+        """GET with a non-existent statistic slug returns 404."""
+        url = "{}?statistic=does-not-exist&start_month={}&end_month={}".format(
+            self.url, self.month_jan.slug, self.month_mar.slug
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
+
+    def test_get_invalid_start_month(self):
+        """GET with a non-existent start_month slug returns 404."""
+        url = "{}?statistic={}&start_month=does-not-exist&end_month={}".format(
+            self.url, self.statistic.slug, self.month_mar.slug
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
+
+    def test_get_invalid_end_month(self):
+        """GET with a non-existent end_month slug returns 404."""
+        url = "{}?statistic={}&start_month={}&end_month=does-not-exist".format(
+            self.url, self.statistic.slug, self.month_jan.slug
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
+
+    def test_invalid_methods(self):
+        """Only GET is allowed; other methods return 405."""
+        with self.subTest("using POST"):
+            response = self.client.post(self.url)
+            self.assertEqual(response.status_code, 405)
+
+        with self.subTest("using PUT"):
+            response = self.client.put(self.url)
+            self.assertEqual(response.status_code, 405)
+
+        with self.subTest("using PATCH"):
+            response = self.client.patch(self.url)
+            self.assertEqual(response.status_code, 405)
+
+        with self.subTest("using DELETE"):
+            response = self.client.delete(self.url)
+            self.assertEqual(response.status_code, 405)
