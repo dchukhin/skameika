@@ -115,6 +115,14 @@ def totals(request, *args, **kwargs):
         "monthly_statistics": monthly_statistics,
         "months": models.Month.objects.all(),
         "active_month": month,
+        "expense_chart_data": [
+            {"name": cat["name"], "total": float(cat["total"])}
+            for cat in expense_categories.values()
+        ],
+        "earning_chart_data": [
+            {"name": cat["name"], "total": float(cat["total"])}
+            for cat in earning_categories.values()
+        ],
     }
     return render(request, "occurrence/totals.html", context)
 

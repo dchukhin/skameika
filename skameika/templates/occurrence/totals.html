@@ -1,6 +1,15 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% block extra-css %}
+<style>
+  .chart-container {
+    max-width: 420px;
+    margin: 0 auto 2em;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 
 
@@ -8,6 +17,11 @@
 
 
 <h3>Earnings</h3>
+{% if earning_chart_data %}
+<div class="chart-container">
+  <canvas id="earning-chart"></canvas>
+</div>
+{% endif %}
 <table class="table">
   <thead>
     <tr>
@@ -42,6 +56,11 @@
 </table>
 
 <h3>Expenses</h3>
+{% if expense_chart_data %}
+<div class="chart-container">
+  <canvas id="expense-chart"></canvas>
+</div>
+{% endif %}
 <table class="table">
   <thead>
     <tr>
@@ -126,4 +145,14 @@
 </nav>
 
 
+{{ expense_chart_data|json_script:"expense-chart-data" }}
+{{ earning_chart_data|json_script:"earning-chart-data" }}
+<span id="expense-total-value" data-value="{{ expense_total }}" hidden></span>
+<span id="earning-total-value" data-value="{{ earning_total }}" hidden></span>
+
 {% endblock content %}
+
+{% block extra-js %}
+<script src="{% static 'js/vendor/chart.umd.min.js' %}"></script>
+<script src="{% static 'js/totals_charts.js' %}"></script>
+{% endblock %}
