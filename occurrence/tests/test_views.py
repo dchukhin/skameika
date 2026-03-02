@@ -284,6 +284,52 @@ class TestEditTransactionTestCase(TestCase):
                     transaction.date, datetime.strptime(new_date, "%Y-%m-%d").date()
                 )
 
+    def test_post_valid_with_next(self):
+        """A valid POST with a ?next= param redirects to that URL."""
+        next_url = "/some/return/path/"
+        for transaction, type_cat in (
+            (self.transaction_expense, models.Category.TYPE_EXPENSE),
+            (self.transaction_earning, models.Category.TYPE_EARNING),
+        ):
+            with self.subTest(type_cat=type_cat):
+                url = (
+                    reverse(self.url_name, kwargs={"type_cat": type_cat, "id": transaction.pk})
+                    + f"?next={next_url}"
+                )
+                data = {
+                    "title": "Updated Title",
+                    "amount": "50.00",
+                    "date": "2022-01-01",
+                    "category": transaction.category.pk,
+                    "description": transaction.description,
+                }
+                response = self.client.post(url, data=data)
+                self.assertRedirects(response, next_url, fetch_redirect_response=False)
+
+    def test_post_valid_with_unsafe_next(self):
+        """A valid POST with an unsafe ?next= param (not starting with /) uses the default redirect."""
+        for transaction, type_cat in (
+            (self.transaction_expense, models.Category.TYPE_EXPENSE),
+            (self.transaction_earning, models.Category.TYPE_EARNING),
+        ):
+            with self.subTest(type_cat=type_cat):
+                url = (
+                    reverse(self.url_name, kwargs={"type_cat": type_cat, "id": transaction.pk})
+                    + "?next=http://evil.com/"
+                )
+                data = {
+                    "title": "Updated Title",
+                    "amount": "50.00",
+                    "date": "2022-01-01",
+                    "category": transaction.category.pk,
+                    "description": transaction.description,
+                }
+                response = self.client.post(url, data=data)
+                expected = "{}?month={}".format(
+                    reverse("transactions"), slugify("January, 2022")
+                )
+                self.assertRedirects(response, expected, fetch_redirect_response=False)
+
     def test_post_invalid(self):
         """POSTing invalid data to update a transaction."""
         new_amount = 50

@@ -167,6 +167,10 @@ def edit_transaction(request, type_cat, id):
         # If the form is valid, save the object
         if form.is_valid():
             form.save()
+            # If there is a next_url parameter, then redirect the user to it.
+            next_url = request.GET.get("next")
+            if next_url and next_url.startswith("/"):
+                return redirect(next_url)
             # Redirect the user to the transactions view for the month that this
             # transaction is in
             return redirect(

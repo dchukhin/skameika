@@ -73,7 +73,7 @@
           <td>{{ transaction.category }}</td>
           <td>{{ transaction.description }}</td>
           <td>{% if transaction.receipt %}<a href="{{ transaction.receipt.url }}">receipt</a>{% endif %}</td>
-          <td><a href="{% url "edit_transaction" transaction.category.type_cat transaction.pk %}">Edit</a></td>
+          <td><a href="{% url "edit_transaction" transaction.category.type_cat transaction.pk %}{% if csv_import %}?next={% url 'csv_import_transactions' csv_import.pk %}{% endif %}">Edit</a></td>
         </tr>
       {% endfor %}
     </tbody>
@@ -145,7 +145,7 @@
           <td>{{ transaction.category }}</td>
           <td>{{ transaction.description }}</td>
           <td>{% if transaction.receipt %}<a href="{{ transaction.receipt.url }}">receipt</a>{% endif %}</td>
-          <td><a href="{% url "edit_transaction" transaction.category.type_cat transaction.pk %}">Edit</a></td>
+          <td><a href="{% url "edit_transaction" transaction.category.type_cat transaction.pk %}{% if csv_import %}?next={% url 'csv_import_transactions' csv_import.pk %}{% endif %}">Edit</a></td>
         </tr>
       {% endfor %}
     </tbody>
