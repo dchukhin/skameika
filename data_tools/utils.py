@@ -4,7 +4,7 @@ from datetime import datetime
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.text import slugify
 
-from data_tools.models import CSVImport, TitleMapping
+from data_tools.models import CSVImport, TitleMapping, CategoryMapping
 from occurrence.models import ExpenseTransaction, EarningTransaction, Category, Month
 
 
@@ -23,6 +23,20 @@ def get_mapped_title(description, title_mappings):
         str: The canonical title if a mapping exists, otherwise the original description.
     """
     return title_mappings.get(description, description)
+
+
+def get_mapped_category(description, category_mappings):
+    """
+    Get a Category override for a transaction description using a pre-loaded mapping.
+
+    Args:
+        description (str): The original CSV description.
+        category_mappings (dict): Maps source_title -> Category object.
+
+    Returns:
+        Category or None: The mapped category if one exists, otherwise None.
+    """
+    return category_mappings.get(description, None)
 
 
 def parse_date(date_string):
@@ -61,6 +75,12 @@ def ingest_csv(csv_import):
     title_mappings = dict(
         TitleMapping.objects.values_list("source_title", "canonical_title")
     )
+
+    # Load all category mappings into a dictionary for efficient lookup
+    category_mappings = {
+        m.source_title: m.category
+        for m in CategoryMapping.objects.filter(category__isnull=False).select_related("category")
+    }
 
     expense_transactions = []
     earning_transactions = []
@@ -111,6 +131,11 @@ def ingest_csv(csv_import):
                     ).first()
                 if not category:
                     category = categories.first()
+
+            # Override category with CategoryMapping if one exists for this description
+            mapped_category = get_mapped_category(row["Description"], category_mappings)
+            if mapped_category is not None:
+                category = mapped_category
 
             # Get the mapped title for this transaction
             mapped_title = get_mapped_title(row["Description"], title_mappings)

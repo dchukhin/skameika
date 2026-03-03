@@ -11,3 +11,8 @@ class CSVImportAdmin(admin.ModelAdmin):
 @admin.register(models.TitleMapping)
 class TitleMappingAdmin(admin.ModelAdmin):
     pass
+
+
+@admin.register(models.CategoryMapping)
+class CategoryMappingAdmin(admin.ModelAdmin):
+    pass

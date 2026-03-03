@@ -42,3 +42,32 @@ class TitleMapping(models.Model):
 
     def __str__(self):
         return f"'{self.source_title}' -> '{self.canonical_title}'"
+
+
+class CategoryMapping(models.Model):
+    """
+    Model to automatically assign a category to transactions based on their
+    source description as it appears in CSV files.
+
+    For example: 'Restaurant A' -> Category("Food")
+    """
+
+    source_title = models.CharField(
+        max_length=255,
+        unique=True,
+        help_text="The title of a transaction",
+    )
+    category = models.ForeignKey(
+        "occurrence.Category",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="The category to assign to transactions with this source title",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["source_title"]
+
+    def __str__(self):
+        return f"'{self.source_title}' -> '{self.category}'"

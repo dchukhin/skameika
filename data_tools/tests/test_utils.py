@@ -3,7 +3,7 @@ import os
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 
-from data_tools.models import CSVImport, TitleMapping
+from data_tools.models import CSVImport, TitleMapping, CategoryMapping
 from data_tools.utils import ingest_csv
 from occurrence.models import (
     Category,
@@ -30,6 +30,11 @@ class IngestCSVTest(TestCase):
             name="Food & Drink",
             type_cat=Category.TYPE_EXPENSE,
             slug="food-drink",
+        )
+        self.category_other, _ = Category.objects.get_or_create(
+            name="Other",
+            type_cat=Category.TYPE_EXPENSE,
+            slug="other",
         )
         # Create a CSVImport instance
         self.csv_import = CSVImport.objects.create()
@@ -222,3 +227,48 @@ class IngestCSVTest(TestCase):
         self.assertTrue(
             EarningTransaction.objects.filter(title="Company A").exists()
         )
+
+    def test_category_mapping(self):
+        """CategoryMapping overrides the CSV Category column for matching descriptions."""
+        # Map "Test Restaurant 1" (CSV category: "Food & Drink") to Other
+        CategoryMapping.objects.create(
+            source_title="Test Restaurant 1",
+            category=self.category_other,
+        )
+        csv_file_path = os.path.join(os.path.dirname(__file__), "example.csv")
+        with open(csv_file_path, "rb") as the_file:
+            self.csv_import.file = SimpleUploadedFile(
+                "example.csv", the_file.read(), content_type="text/csv"
+            )
+            self.csv_import.save()
+
+        count_transactions_created, errors = ingest_csv(self.csv_import)
+
+        self.assertEqual(count_transactions_created, 3)
+        self.assertEqual(errors, [])
+
+        # "Test Restaurant 1" uses CategoryMapping, not the CSV column
+        restaurant_1 = ExpenseTransaction.objects.get(title="Test Restaurant 1")
+        self.assertEqual(restaurant_1.category, self.category_other)
+
+        # "Test Restaurant 2" has no CategoryMapping — uses the CSV column fallback
+        restaurant_2 = ExpenseTransaction.objects.get(title="Test Restaurant 2")
+        self.assertEqual(restaurant_2.category, self.category_uncategorized_expense)
+
+    def test_category_mapping_no_match(self):
+        """Rows without a CategoryMapping entry use the CSV Category column as before."""
+        csv_file_path = os.path.join(os.path.dirname(__file__), "example.csv")
+        with open(csv_file_path, "rb") as the_file:
+            self.csv_import.file = SimpleUploadedFile(
+                "example.csv", the_file.read(), content_type="text/csv"
+            )
+            self.csv_import.save()
+
+        count_transactions_created, errors = ingest_csv(self.csv_import)
+
+        self.assertEqual(count_transactions_created, 3)
+        self.assertEqual(errors, [])
+
+        # Unchanged: "Test Restaurant 1" gets food_and_drink from CSV column
+        restaurant_1 = ExpenseTransaction.objects.get(title="Test Restaurant 1")
+        self.assertEqual(restaurant_1.category, self.category_food_and_drink)
