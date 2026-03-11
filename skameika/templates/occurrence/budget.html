@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+<h2>Budget for {{ active_month }}</h2>
+
+<h3>New Earning Budget Row</h3>
+<form action="{% url 'budget' %}?month={{ active_month.slug }}" method="POST" class="form">
+  {% csrf_token %}
+  <input type="hidden" name="form_type" value="{{ earning_type_constant }}">
+  {{ earning_form.as_p }}
+  <button type="submit" class="btn btn-primary">Add Earning Row</button>
+</form>
+
+<h3>Earnings</h3>
+<table class="table" id="earning-table">
+  <thead>
+    <tr>
+      <th>Category</th>
+      <th>Amount</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in earning_rows %}
+      <tr id="row-{{ row.id }}">
+        <td class="col-sm-6" id="category-{{ row.id }}">{{ row.category.name }}</td>
+        <td id="amount-{{ row.id }}">{{ row.amount }}</td>
+        <td>
+          <a href="{% url 'edit_budget_row' row.id %}">Edit</a>
+          <form action="{% url 'delete_budget_row' row.id %}" method="POST" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger btn-xs">Delete</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    <tr>
+      <td class="col-sm-6"><strong>Total</strong></td>
+      <td id="earning-total"><strong>{{ earning_total }}</strong></td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>New Expense Budget Row</h3>
+<form action="{% url 'budget' %}?month={{ active_month.slug }}" method="POST" class="form">
+  {% csrf_token %}
+  <input type="hidden" name="form_type" value="{{ expense_type_constant }}">
+  {{ expense_form.as_p }}
+  <button type="submit" class="btn btn-primary">Add Expense Row</button>
+</form>
+
+<h3>Expenses</h3>
+<table class="table" id="expense-table">
+  <thead>
+    <tr>
+      <th>Category</th>
+      <th>Amount</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in expense_rows %}
+      <tr id="row-{{ row.id }}">
+        <td class="col-sm-6" id="category-{{ row.id }}">{{ row.category.name }}</td>
+        <td id="amount-{{ row.id }}">{{ row.amount }}</td>
+        <td>
+          <a href="{% url 'edit_budget_row' row.id %}">Edit</a>
+          <form action="{% url 'delete_budget_row' row.id %}" method="POST" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger btn-xs">Delete</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    <tr>
+      <td class="col-sm-6"><strong>Total</strong></td>
+      <td id="expense-total"><strong>{{ expense_total }}</strong></td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>Total</h3>
+<table class="table">
+  <tbody>
+    <tr>
+      <td class="col-sm-6"><strong>Total</strong></td>
+      <td id="grand-total"><strong>{{ total }}</strong></td>
+    </tr>
+  </tbody>
+</table>
+
+<nav>
+  <ul class="pagination">
+    {% for month in months %}
+      <li class="{% if active_month == month %}active{% endif %}">
+        <a href="{% url 'budget' %}?month={{ month.slug }}">
+          {{ month }}
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+</nav>
+
+<h3>Copy Budget</h3>
+<form action="{% url 'copy_budget' %}" method="POST" class="form-inline">
+  {% csrf_token %}
+  <input type="hidden" name="target_month" value="{{ active_month.slug }}">
+  <label for="source_month">Copy budget from:</label>
+  <select name="source_month" id="source_month" class="form-control">
+    {% for month in months %}
+      {% if month != active_month %}
+        <option value="{{ month.slug }}">{{ month }}</option>
+      {% endif %}
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn btn-primary">Copy</button>
+</form>
+
+{% endblock content %}

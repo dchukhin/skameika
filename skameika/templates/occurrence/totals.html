@@ -27,17 +27,19 @@
     <tr>
       <th>Category</th>
       <th>Total</th>
+      <th>Budgeted</th>
     </tr>
   </thead>
   <tbody>
     {% for category in earning_categories.values %}
       <tr class="category-row">
-        <td class="col-sm-8" id="name-{{ category.name }}">{{ category.name }}</td>
+        <td class="col-sm-6" id="name-{{ category.name }}">{{ category.name }}</td>
         <td id="total-{{ category.name }}">{{ category.total }}</td>
+        <td id="budgeted-{{ category.name }}">{% if category.budgeted != None %}{{ category.budgeted }}{% else %}-{% endif %}</td>
       </tr>
       {% for child_category in category.children %}
         <tr class="category-row">
-          <td class="col-sm-8" id="name-{{ child_category.name }}">
+          <td class="col-sm-6" id="name-{{ child_category.name }}">
               <span class="col-sm-1"></span>
               {{ child_category.name }}
           </td>
@@ -45,12 +47,14 @@
             <span class="col-sm-1"></span>
             {{ child_category.total }}
           </td>
+          <td id="budgeted-{{ child_category.name }}">{% if child_category.budgeted != None %}{{ child_category.budgeted }}{% else %}-{% endif %}</td>
         </tr>
       {% endfor %}
     {% endfor %}
     <tr>
-      <td class="col-sm-8">Total</td>
+      <td class="col-sm-6">Total</td>
       <td>{{ earning_total }}</td>
+      <td></td>
     </tr>
   </tbody>
 </table>
@@ -66,17 +70,19 @@
     <tr>
       <th>Category</th>
       <th>Total</th>
+      <th>Budgeted</th>
     </tr>
   </thead>
   <tbody>
     {% for category in expense_categories.values %}
       <tr class="category-row">
-        <td class="col-sm-8" id="name-{{ category.name }}">{{ category.name }}</td>
+        <td class="col-sm-6" id="name-{{ category.name }}">{{ category.name }}</td>
         <td id="total-{{ category.name }}">{{ category.total }}</td>
+        <td id="budgeted-{{ category.name }}">{% if category.budgeted != None %}{{ category.budgeted }}{% else %}-{% endif %}</td>
       </tr>
       {% for child_category in category.children %}
         <tr class="category-row">
-          <td class="col-sm-8" id="name-{{ child_category.name }}">
+          <td class="col-sm-6" id="name-{{ child_category.name }}">
               <span class="col-sm-1"></span>
               {{ child_category.name }}
           </td>
@@ -84,12 +90,14 @@
             <span class="col-sm-1"></span>
             {{ child_category.total }}
           </td>
+          <td id="budgeted-{{ child_category.name }}">{% if child_category.budgeted != None %}{{ child_category.budgeted }}{% else %}-{% endif %}</td>
         </tr>
       {% endfor %}
     {% endfor %}
     <tr>
-      <td class="col-sm-8">Total</td>
+      <td class="col-sm-6">Total</td>
       <td>{{ expense_total }}</td>
+      <td></td>
     </tr>
   </tbody>
 </table>
@@ -99,8 +107,9 @@
 <table class="table">
   <tbody>
     <tr>
-      <td class="col-sm-8">Total</td>
+      <td class="col-sm-6">Total</td>
       <td>{{ total }}</td>
+      <td></td>
     </tr>
   </tbody>
 </table>

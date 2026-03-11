@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from decimal import Decimal
 
 from django.forms.models import model_to_dict
 from django.test import TestCase
@@ -1195,3 +1196,590 @@ class TestStatisticsChartView(TestCase):
         with self.subTest("using DELETE"):
             response = self.client.delete(self.url)
             self.assertEqual(response.status_code, 405)
+
+
+class TestBudgetView(TestCase):
+    url_name = "budget"
+    template_name = "occurrence/budget.html"
+
+    def setUp(self):
+        super().setUp()
+        self.current_month = factories.MonthFactory(
+            month=date.today().month,
+            year=date.today().year,
+            name=date.today().strftime("%B, %Y"),
+        )
+        self.url = reverse(self.url_name)
+        self.url_current_month = "{}?month={}".format(self.url, self.current_month.slug)
+
+    def test_get_no_month(self):
+        """GETting the budget view without a month uses the current month."""
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, self.template_name)
+        self.assertEqual(response.context["active_month"], self.current_month)
+
+    def test_get_with_month(self):
+        """GETting the budget view with a month param shows that month's budget."""
+        other_month = factories.MonthFactory(month=1, year=2020, name="January, 2020")
+        url = "{}?month={}".format(self.url, other_month.slug)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["active_month"], other_month)
+
+    def test_get_invalid_month(self):
+        """GETting with a non-existent month slug returns 404."""
+        url = "{}?month=does-not-exist".format(self.url)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
+
+    def test_earning_expense_total_sections(self):
+        """Budget rows are split into earning and expense sections with correct totals."""
+        earning_cat = factories.IncomeCategoryFactory()
+        expense_cat = factories.ExpenseCategoryFactory()
+        earning_row = factories.ExpectedMonthlyCategoryTotalFactory(
+            category=earning_cat, month=self.current_month, amount=Decimal("1000.00")
+        )
+        expense_row = factories.ExpectedMonthlyCategoryTotalFactory(
+            category=expense_cat, month=self.current_month, amount=Decimal("500.00")
+        )
+
+        response = self.client.get(self.url_current_month)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(earning_row, response.context["earning_rows"])
+        self.assertIn(expense_row, response.context["expense_rows"])
+        self.assertEqual(response.context["earning_total"], Decimal("1000.00"))
+        self.assertEqual(response.context["expense_total"], Decimal("500.00"))
+        self.assertEqual(response.context["total"], Decimal("500.00"))
+
+        # Verify row data appears in HTML
+        self.assertContains(response, 'id="category-{}"'.format(earning_row.id))
+        self.assertContains(response, 'id="category-{}"'.format(expense_row.id))
+        self.assertContains(response, 'id="amount-{}"'.format(earning_row.id))
+        self.assertContains(response, 'id="amount-{}"'.format(expense_row.id))
+
+    def test_empty_budget(self):
+        """A month with no budget rows shows empty tables."""
+        response = self.client.get(self.url_current_month)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context["earning_rows"]), 0)
+        self.assertEqual(len(response.context["expense_rows"]), 0)
+        self.assertEqual(response.context["earning_total"], 0)
+        self.assertEqual(response.context["expense_total"], 0)
+        self.assertEqual(response.context["total"], 0)
+
+    def test_rows_from_other_months_not_shown(self):
+        """Budget rows from other months are not included."""
+        other_month = factories.MonthFactory(month=1, year=2020, name="January, 2020")
+        row_other = factories.ExpectedMonthlyCategoryTotalFactory(month=other_month)
+        row_current = factories.ExpectedMonthlyCategoryTotalFactory(month=self.current_month)
+
+        response = self.client.get(self.url_current_month)
+
+        all_rows = list(response.context["earning_rows"]) + list(response.context["expense_rows"])
+        self.assertIn(row_current, all_rows)
+        self.assertNotIn(row_other, all_rows)
+
+    def test_post_add_expense_row(self):
+        """POSTing valid expense data creates a new budget row."""
+        category = factories.ExpenseCategoryFactory()
+        # Currently, there is no ExpectedMonthlyCategoryTotal for the month and category.
+        self.assertEqual(
+            models.ExpectedMonthlyCategoryTotal.objects.filter(
+                month=self.current_month, category=category
+            ).count(),
+            0,
+        )
+
+        data = {
+            "form_type": models.Category.TYPE_EXPENSE,
+            "category": category.pk,
+            "amount": "250.00",
+        }
+
+        response = self.client.post(self.url_current_month, data=data)
+
+        self.assertRedirects(response, self.url_current_month)
+        self.assertEqual(
+            models.ExpectedMonthlyCategoryTotal.objects.filter(
+                month=self.current_month, category=category
+            ).count(),
+            1,
+        )
+        row = models.ExpectedMonthlyCategoryTotal.objects.get(
+            month=self.current_month, category=category
+        )
+        self.assertEqual(row.amount, Decimal("250.00"))
+
+    def test_post_add_earning_row(self):
+        """POSTing valid earning data creates a new budget row."""
+        category = factories.IncomeCategoryFactory()
+        data = {
+            "form_type": models.Category.TYPE_EARNING,
+            "category": category.pk,
+            "amount": "500.00",
+        }
+        # Currently, there are no ExpectedMonthlyCategoryTotals.
+        self.assertEqual(
+            models.ExpectedMonthlyCategoryTotal.objects.filter().count(),
+            0,
+        )
+
+        response = self.client.post(self.url_current_month, data=data)
+
+        self.assertRedirects(response, self.url_current_month)
+        self.assertEqual(
+            models.ExpectedMonthlyCategoryTotal.objects.filter(
+                month=self.current_month, category=category
+            ).count(),
+            1,
+        )
+        row = models.ExpectedMonthlyCategoryTotal.objects.get(
+            month=self.current_month, category=category
+        )
+        self.assertEqual(row.amount, Decimal("500.00"))
+
+    def test_post_add_duplicate_row(self):
+        """POSTing a row for a category that already exists shows form error."""
+        category = factories.ExpenseCategoryFactory()
+        factories.ExpectedMonthlyCategoryTotalFactory(
+            category=category, month=self.current_month, amount=Decimal("100.00")
+        )
+
+        data = {
+            "form_type": models.Category.TYPE_EXPENSE,
+            "category": category.pk,
+            "amount": "200.00",
+        }
+        response = self.client.post(self.url_current_month, data=data)
+
+        # The page re-renders with form errors (not a redirect)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, self.template_name)
+        self.assertTrue(response.context["expense_form"].errors)
+        # Still only one row for this category
+        self.assertEqual(
+            models.ExpectedMonthlyCategoryTotal.objects.filter(
+                month=self.current_month, category=category
+            ).count(),
+            1,
+        )
+
+    def test_post_add_row_invalid_data(self):
+        """POSTing invalid data does not create a row."""
+        data = {
+            "form_type": models.Category.TYPE_EXPENSE,
+            "category": "",
+            "amount": "not a number",
+        }
+        response = self.client.post(self.url_current_month, data=data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["expense_form"].errors)
+        self.assertEqual(
+            models.ExpectedMonthlyCategoryTotal.objects.filter(month=self.current_month).count(),
+            0,
+        )
+
+    def test_month_navigation(self):
+        """The budget page shows month navigation links."""
+        other_month = factories.MonthFactory(month=6, year=2020, name="June, 2020")
+        response = self.client.get(self.url_current_month)
+        self.assertContains(
+            response, '?month={}'.format(other_month.slug)
+        )
+
+
+class TestEditBudgetRowView(TestCase):
+    url_name = "edit_budget_row"
+    template_name = "occurrence/edit_budget_row.html"
+
+    def setUp(self):
+        super().setUp()
+        self.month = factories.MonthFactory(
+            month=date.today().month,
+            year=date.today().year,
+            name=date.today().strftime("%B, %Y"),
+        )
+        self.category = factories.ExpenseCategoryFactory()
+        self.row = factories.ExpectedMonthlyCategoryTotalFactory(
+            category=self.category, month=self.month, amount=Decimal("100.00")
+        )
+        self.url = reverse(self.url_name, kwargs={"id": self.row.pk})
+
+    def test_get_edit_form(self):
+        """GET renders the edit form pre-filled with existing data."""
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, self.template_name)
+        self.assertEqual(response.context["form"].instance, self.row)
+
+    def test_post_edit_row(self):
+        """POST updates the row and redirects to budget page."""
+        data = {
+            "category": self.category.pk,
+            "amount": "200.00",
+        }
+        self.assertNotEqual(self.row.amount, Decimal("200.00"))
+
+        response = self.client.post(self.url, data=data)
+
+        expected_redirect = "{}?month={}".format(
+            reverse("budget"), self.month.slug
+        )
+        self.assertRedirects(response, expected_redirect)
+        self.row.refresh_from_db()
+        self.assertEqual(self.row.amount, Decimal("200.00"))
+
+    def test_post_edit_change_category_to_existing(self):
+        """Changing category to one that already has a row shows form error."""
+        other_category = factories.ExpenseCategoryFactory()
+        factories.ExpectedMonthlyCategoryTotalFactory(
+            category=other_category, month=self.month, amount=Decimal("50.00")
+        )
+
+        data = {
+            "category": other_category.pk,
+            "amount": "200.00",
+        }
+        response = self.client.post(self.url, data=data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["form"].errors)
+        # Original row unchanged
+        self.row.refresh_from_db()
+        self.assertEqual(self.row.category, self.category)
+
+    def test_post_edit_invalid_data(self):
+        """POSTing invalid data re-renders the form with errors."""
+        data = {
+            "category": self.category.pk,
+            "amount": "not a number",
+        }
+        response = self.client.post(self.url, data=data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["form"].errors)
+        self.row.refresh_from_db()
+        self.assertEqual(self.row.amount, Decimal("100.00"))
+
+    def test_edit_nonexistent_row(self):
+        """GET/POST for a non-existent row returns 404."""
+        url = reverse(self.url_name, kwargs={"id": self.row.pk + 100000})
+
+        with self.subTest("GET"):
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 404)
+
+        with self.subTest("POST"):
+            response = self.client.post(url, data={"category": self.category.pk, "amount": "1"})
+            self.assertEqual(response.status_code, 404)
+
+    def test_invalid_methods(self):
+        """Only GET and POST are allowed."""
+        with self.subTest("using PUT"):
+            response = self.client.put(self.url)
+            self.assertEqual(response.status_code, 405)
+
+        with self.subTest("using PATCH"):
+            response = self.client.patch(self.url)
+            self.assertEqual(response.status_code, 405)
+
+        with self.subTest("using DELETE"):
+            response = self.client.delete(self.url)
+            self.assertEqual(response.status_code, 405)
+
+
+class TestDeleteBudgetRowView(TestCase):
+    url_name = "delete_budget_row"
+
+    def setUp(self):
+        super().setUp()
+        self.month = factories.MonthFactory(
+            month=date.today().month,
+            year=date.today().year,
+            name=date.today().strftime("%B, %Y"),
+        )
+        self.row = factories.ExpectedMonthlyCategoryTotalFactory(
+            month=self.month, amount=Decimal("100.00")
+        )
+        self.url = reverse(self.url_name, kwargs={"id": self.row.pk})
+
+    def test_post_delete_row(self):
+        """POST deletes the row and redirects to budget page."""
+        response = self.client.post(self.url)
+
+        expected_redirect = "{}?month={}".format(
+            reverse("budget"), self.month.slug
+        )
+        self.assertRedirects(response, expected_redirect)
+        self.assertFalse(
+            models.ExpectedMonthlyCategoryTotal.objects.filter(pk=self.row.pk).exists()
+        )
+
+    def test_get_not_allowed(self):
+        """GET returns 405."""
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 405)
+
+    def test_delete_nonexistent_row(self):
+        """POST for a non-existent row returns 404."""
+        url = reverse(self.url_name, kwargs={"id": self.row.pk + 100000})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 404)
+
+    def test_invalid_methods(self):
+        """Only POST is allowed."""
+        with self.subTest("using PUT"):
+            response = self.client.put(self.url)
+            self.assertEqual(response.status_code, 405)
+
+        with self.subTest("using PATCH"):
+            response = self.client.patch(self.url)
+            self.assertEqual(response.status_code, 405)
+
+        with self.subTest("using DELETE"):
+            response = self.client.delete(self.url)
+            self.assertEqual(response.status_code, 405)
+
+
+class TestCopyBudgetView(TestCase):
+    url_name = "copy_budget"
+
+    def setUp(self):
+        super().setUp()
+        self.source_month = factories.MonthFactory(
+            month=1, year=2020, name="January, 2020"
+        )
+        self.target_month = factories.MonthFactory(
+            month=2, year=2020, name="February, 2020"
+        )
+        self.url = reverse(self.url_name)
+
+    def test_copy_budget_success(self):
+        """All rows are copied from source to target month."""
+        cat1 = factories.ExpenseCategoryFactory()
+        cat2 = factories.IncomeCategoryFactory()
+        factories.ExpectedMonthlyCategoryTotalFactory(
+            category=cat1, month=self.source_month, amount=Decimal("100.00")
+        )
+        factories.ExpectedMonthlyCategoryTotalFactory(
+            category=cat2, month=self.source_month, amount=Decimal("200.00")
+        )
+        self.assertEqual(
+            models.ExpectedMonthlyCategoryTotal.objects.filter(
+                month=self.target_month
+            ).count(),
+            0
+        )
+
+        data = {
+            "source_month": self.source_month.slug,
+            "target_month": self.target_month.slug,
+        }
+        response = self.client.post(self.url, data=data)
+
+        expected_redirect = "{}?month={}".format(
+            reverse("budget"), self.target_month.slug
+        )
+        self.assertRedirects(response, expected_redirect)
+
+        target_rows = models.ExpectedMonthlyCategoryTotal.objects.filter(
+            month=self.target_month
+        )
+        self.assertEqual(target_rows.count(), 2)
+        self.assertEqual(
+            target_rows.get(category=cat1).amount, Decimal("100.00")
+        )
+        self.assertEqual(
+            target_rows.get(category=cat2).amount, Decimal("200.00")
+        )
+
+    def test_copy_budget_with_conflicts(self):
+        """No rows are copied when conflicts exist, and all conflicts are reported."""
+        cat1 = factories.ExpenseCategoryFactory()
+        cat2 = factories.ExpenseCategoryFactory()
+        # Source has both categories
+        factories.ExpectedMonthlyCategoryTotalFactory(
+            category=cat1, month=self.source_month, amount=Decimal("100.00")
+        )
+        factories.ExpectedMonthlyCategoryTotalFactory(
+            category=cat2, month=self.source_month, amount=Decimal("200.00")
+        )
+        # Target already has cat1
+        factories.ExpectedMonthlyCategoryTotalFactory(
+            category=cat1, month=self.target_month, amount=Decimal("50.00")
+        )
+
+        data = {
+            "source_month": self.source_month.slug,
+            "target_month": self.target_month.slug,
+        }
+        response = self.client.post(self.url, data=data, follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        # The conflict error message is shown
+        messages_list = list(response.context["messages"])
+        error_messages = [m for m in messages_list if m.level_tag == "error"]
+        self.assertEqual(len(error_messages), 1)
+        self.assertIn(cat1.name, str(error_messages[0]))
+
+        # No new rows were created (target still has just 1)
+        self.assertEqual(
+            models.ExpectedMonthlyCategoryTotal.objects.filter(
+                month=self.target_month
+            ).count(),
+            1,
+        )
+
+    def test_copy_budget_all_conflicts(self):
+        """When all source rows conflict, no rows are copied and all errors shown."""
+        cat1 = factories.ExpenseCategoryFactory()
+        cat2 = factories.ExpenseCategoryFactory()
+        factories.ExpectedMonthlyCategoryTotalFactory(
+            category=cat1, month=self.source_month
+        )
+        factories.ExpectedMonthlyCategoryTotalFactory(
+            category=cat2, month=self.source_month
+        )
+        # Both already exist in target
+        factories.ExpectedMonthlyCategoryTotalFactory(
+            category=cat1, month=self.target_month
+        )
+        factories.ExpectedMonthlyCategoryTotalFactory(
+            category=cat2, month=self.target_month
+        )
+
+        data = {
+            "source_month": self.source_month.slug,
+            "target_month": self.target_month.slug,
+        }
+        response = self.client.post(self.url, data=data, follow=True)
+
+        messages_list = list(response.context["messages"])
+        error_messages = [m for m in messages_list if m.level_tag == "error"]
+        self.assertEqual(len(error_messages), 2)
+
+    def test_copy_from_empty_month(self):
+        """Copying from a month with no budget rows shows info message."""
+        data = {
+            "source_month": self.source_month.slug,
+            "target_month": self.target_month.slug,
+        }
+        response = self.client.post(self.url, data=data, follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        messages_list = list(response.context["messages"])
+        info_messages = [m for m in messages_list if m.level_tag == "info"]
+        self.assertEqual(len(info_messages), 1)
+
+    def test_copy_budget_invalid_source_month(self):
+        """POST with non-existent source month returns 404."""
+        data = {
+            "source_month": "does-not-exist",
+            "target_month": self.target_month.slug,
+        }
+        response = self.client.post(self.url, data=data)
+        self.assertEqual(response.status_code, 404)
+
+    def test_copy_budget_invalid_target_month(self):
+        """POST with non-existent target month returns 404."""
+        data = {
+            "source_month": self.source_month.slug,
+            "target_month": "does-not-exist",
+        }
+        response = self.client.post(self.url, data=data)
+        self.assertEqual(response.status_code, 404)
+
+    def test_get_not_allowed(self):
+        """GET returns 405."""
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 405)
+
+    def test_invalid_methods(self):
+        """Only POST is allowed."""
+        with self.subTest("using PUT"):
+            response = self.client.put(self.url)
+            self.assertEqual(response.status_code, 405)
+
+        with self.subTest("using PATCH"):
+            response = self.client.patch(self.url)
+            self.assertEqual(response.status_code, 405)
+
+        with self.subTest("using DELETE"):
+            response = self.client.delete(self.url)
+            self.assertEqual(response.status_code, 405)
+
+
+class TestTotalsViewBudgetColumn(TestCase):
+    """Tests for the budgeted column on the totals page."""
+
+    url_name = "totals"
+    template_name = "occurrence/totals.html"
+
+    def setUp(self):
+        super().setUp()
+        self.current_month = factories.MonthFactory(
+            month=date.today().month,
+            year=date.today().year,
+            name=date.today().strftime("%B, %Y"),
+        )
+        self.url = reverse(self.url_name)
+        self.url_current_month = "{}?month={}".format(self.url, self.current_month.slug)
+
+    def test_totals_shows_budgeted_column(self):
+        """The totals page shows a Budgeted column header."""
+        response = self.client.get(self.url_current_month)
+        self.assertContains(response, "Budgeted")
+
+    def test_totals_category_with_budget_and_transactions(self):
+        """A category with both transactions and a budget shows both values."""
+        category = factories.ExpenseCategoryFactory()
+        factories.ExpenseTransactionFactory(
+            date=date.today(), category=category, amount=Decimal("50.00")
+        )
+        factories.ExpectedMonthlyCategoryTotalFactory(
+            category=category, month=self.current_month, amount=Decimal("100.00")
+        )
+
+        response = self.client.get(self.url_current_month)
+
+        self.assertContains(response, 'id="total-{}"'.format(category.name))
+        self.assertContains(
+            response,
+            '<td id="budgeted-{}">100.00</td>'.format(category.name),
+        )
+
+    def test_totals_category_with_transactions_no_budget(self):
+        """A category with transactions but no budget shows '-' for budgeted."""
+        category = factories.ExpenseCategoryFactory()
+        factories.ExpenseTransactionFactory(
+            date=date.today(), category=category, amount=Decimal("50.00")
+        )
+
+        response = self.client.get(self.url_current_month)
+
+        self.assertContains(
+            response,
+            '<td id="budgeted-{}">-</td>'.format(category.name),
+        )
+
+    def test_totals_category_with_budget_no_transactions(self):
+        """A category with a budget but no transactions appears with 0 total."""
+        category = factories.ExpenseCategoryFactory()
+        factories.ExpectedMonthlyCategoryTotalFactory(
+            category=category, month=self.current_month, amount=Decimal("100.00")
+        )
+
+        response = self.client.get(self.url_current_month)
+
+        self.assertContains(response, 'id="name-{}"'.format(category.name))
+        self.assertContains(
+            response,
+            '<td id="total-{}">0</td>'.format(category.name),
+        )
+        self.assertContains(
+            response,
+            '<td id="budgeted-{}">100.00</td>'.format(category.name),
+        )

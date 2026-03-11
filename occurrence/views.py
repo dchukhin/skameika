@@ -92,15 +92,23 @@ def totals(request, *args, **kwargs):
 
     month = get_object_or_404(models.Month.objects.all(), slug=month_slug)
 
-    # Get the expense totals for this month
+    # Get budget data for this month (used by get_transactions_regular_totals)
+    budget_by_category = {
+        row.category_id: row.amount
+        for row in models.ExpectedMonthlyCategoryTotal.objects.filter(month=month)
+    }
+
+    # Get the expense totals for this month, enriched with budget data
     expense_categories, expense_total = utils.get_transactions_regular_totals(
         month,
         type_cat=models.Category.TYPE_EXPENSE,
+        budget_by_category=budget_by_category,
     )
-    # Get the earning totals for this month
+    # Get the earning totals for this month, enriched with budget data
     earning_categories, earning_total = utils.get_transactions_regular_totals(
         month,
         type_cat=models.Category.TYPE_EARNING,
+        budget_by_category=budget_by_category,
     )
 
     # Get the MonthlyStatistic for this Month
@@ -221,6 +229,178 @@ def csv_import_transactions(request, csv_import_id):
         "earning_transaction_constant": models.Category.TYPE_EARNING,
     }
     return render(request, "occurrence/transactions.html", context)
+
+
+def budget(request):
+    """Show and manage budget rows for a month."""
+    if request.GET.get("month"):
+        current_month = get_object_or_404(
+            models.Month.objects.all(), slug=request.GET.get("month")
+        )
+    else:
+        current_month = models.Month.objects.get_or_create(
+            year=date.today().year,
+            month=date.today().month,
+            name=date.today().strftime("%B, %Y"),
+        )[0]
+
+    expense_form = forms.ExpenseBudgetRowForm()
+    earning_form = forms.EarningBudgetRowForm()
+
+    if request.method == "POST":
+        form_type = request.POST.get("form_type")
+        if form_type == models.Category.TYPE_EXPENSE:
+            form = forms.ExpenseBudgetRowForm(request.POST)
+        elif form_type == models.Category.TYPE_EARNING:
+            form = forms.EarningBudgetRowForm(request.POST)
+        else:
+            form = None
+
+        if form and form.is_valid():
+            budget_row = form.save(commit=False)
+            budget_row.month = current_month
+            # Check for unique_together violation before saving
+            if models.ExpectedMonthlyCategoryTotal.objects.filter(
+                category=budget_row.category, month=current_month
+            ).exists():
+                form.add_error(
+                    "category",
+                    "A budget row for this category already exists in this month.",
+                )
+            else:
+                budget_row.save()
+                return redirect(
+                    "{}?month={}".format(reverse("budget"), current_month.slug)
+                )
+
+        # Put the form (with errors) back in the right slot
+        if form:
+            if form_type == models.Category.TYPE_EXPENSE:
+                expense_form = form
+            elif form_type == models.Category.TYPE_EARNING:
+                earning_form = form
+
+    # Fetch all rows once and split in Python to avoid extra DB queries
+    all_rows = list(
+        models.ExpectedMonthlyCategoryTotal.objects.filter(
+            month=current_month
+        ).select_related("category")
+    )
+    earning_rows = [r for r in all_rows if r.category.type_cat == models.Category.TYPE_EARNING]
+    expense_rows = [r for r in all_rows if r.category.type_cat == models.Category.TYPE_EXPENSE]
+    earning_total = sum(r.amount for r in earning_rows)
+    expense_total = sum(r.amount for r in expense_rows)
+
+    context = {
+        "earning_rows": earning_rows,
+        "expense_rows": expense_rows,
+        "earning_total": earning_total,
+        "expense_total": expense_total,
+        "total": earning_total - expense_total,
+        "months": models.Month.objects.all(),
+        "active_month": current_month,
+        "expense_form": expense_form,
+        "earning_form": earning_form,
+        "expense_type_constant": models.Category.TYPE_EXPENSE,
+        "earning_type_constant": models.Category.TYPE_EARNING,
+    }
+    return render(request, "occurrence/budget.html", context)
+
+
+@require_http_methods(["GET", "POST"])
+def edit_budget_row(request, id):
+    """Edit a budget row."""
+    row = get_object_or_404(models.ExpectedMonthlyCategoryTotal, pk=id)
+    original_category_id = row.category_id
+
+    if request.method == "POST":
+        form = forms.ExpectedMonthlyCategoryTotalForm(request.POST, instance=row)
+        if form.is_valid():
+            # Check for unique_together violation if category changed
+            if (
+                form.cleaned_data["category"].id != original_category_id
+                and models.ExpectedMonthlyCategoryTotal.objects.filter(
+                    category=form.cleaned_data["category"], month=row.month
+                ).exists()
+            ):
+                form.add_error(
+                    "category",
+                    "A budget row for this category already exists in this month.",
+                )
+            else:
+                form.save()
+                return redirect(
+                    "{}?month={}".format(reverse("budget"), row.month.slug)
+                )
+    else:
+        form = forms.ExpectedMonthlyCategoryTotalForm(instance=row)
+
+    context = {"form": form, "row": row}
+    return render(request, "occurrence/edit_budget_row.html", context)
+
+
+@require_http_methods(["POST"])
+def delete_budget_row(request, id):
+    """Delete a budget row."""
+    row = get_object_or_404(models.ExpectedMonthlyCategoryTotal, pk=id)
+    month_slug = row.month.slug
+    row.delete()
+    return redirect("{}?month={}".format(reverse("budget"), month_slug))
+
+
+@require_http_methods(["POST"])
+def copy_budget(request):
+    """Copy all budget rows from a source month to the target month."""
+    source_month = get_object_or_404(
+        models.Month, slug=request.POST.get("source_month")
+    )
+    target_month = get_object_or_404(
+        models.Month, slug=request.POST.get("target_month")
+    )
+
+    source_rows = models.ExpectedMonthlyCategoryTotal.objects.filter(
+        month=source_month
+    ).select_related("category")
+
+    if not source_rows.exists():
+        messages.info(request, "The source month has no budget rows to copy.")
+        return redirect("{}?month={}".format(reverse("budget"), target_month.slug))
+
+    # Check for conflicts
+    existing_categories = set(
+        models.ExpectedMonthlyCategoryTotal.objects.filter(
+            month=target_month
+        ).values_list("category_id", flat=True)
+    )
+    conflicts = [row for row in source_rows if row.category_id in existing_categories]
+
+    if conflicts:
+        for row in conflicts:
+            messages.error(
+                request,
+                "Category '{}' already has a budget row in {}.".format(
+                    row.category.name, target_month.name
+                ),
+            )
+        return redirect("{}?month={}".format(reverse("budget"), target_month.slug))
+
+    # No conflicts — copy all rows
+    new_rows = [
+        models.ExpectedMonthlyCategoryTotal(
+            category=row.category,
+            month=target_month,
+            amount=row.amount,
+        )
+        for row in source_rows
+    ]
+    models.ExpectedMonthlyCategoryTotal.objects.bulk_create(new_rows)
+    messages.success(
+        request,
+        "{} budget row(s) copied from {} to {}.".format(
+            len(new_rows), source_month.name, target_month.name
+        ),
+    )
+    return redirect("{}?month={}".format(reverse("budget"), target_month.slug))
 
 
 @require_http_methods(["GET"])

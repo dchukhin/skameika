@@ -24,4 +24,16 @@ urlpatterns = [
         name="csv_import_list",
     ),
     re_path(r"^statistics-chart/$", views.statistics_chart_view, name="statistics_chart_view"),
+    re_path(r"^budget/$", views.budget, name="budget"),
+    re_path(
+        r"^budget/edit/(?P<id>[0-9]+)/$",
+        views.edit_budget_row,
+        name="edit_budget_row",
+    ),
+    re_path(
+        r"^budget/delete/(?P<id>[0-9]+)/$",
+        views.delete_budget_row,
+        name="delete_budget_row",
+    ),
+    re_path(r"^budget/copy/$", views.copy_budget, name="copy_budget"),
 ]
