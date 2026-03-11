@@ -674,6 +674,137 @@ class GetTransactionsRegularTotalsWithBudgetTestCase(TestCase):
         self.assertEqual(budget_only_child["budgeted"], Decimal("120.00"))
 
 
+class GetTransactionsRegularTotalsProgressTestCase(TestCase):
+    """Test case for the progress_percent calculation in get_transactions_regular_totals()."""
+
+    def setUp(self):
+        super().setUp()
+        self.month = factories.MonthFactory(year=2023, month=6, name="June, 2023")
+
+    def test_progress_percent_under_budget(self):
+        """A category under budget gets the correct progress_percent."""
+        category = factories.ExpenseCategoryFactory()
+        factories.ExpenseTransactionFactory(
+            category=category,
+            amount=50,
+            date=date(year=2023, month=6, day=15),
+        )
+        budget_by_category = {category.id: Decimal("100.00")}
+
+        results, _ = utils.get_transactions_regular_totals(
+            self.month, budget_by_category=budget_by_category
+        )
+
+        self.assertEqual(results[category.id]["progress_percent"], 50)
+
+    def test_progress_percent_at_budget(self):
+        """A category exactly at budget gets 100% progress."""
+        category = factories.ExpenseCategoryFactory()
+        factories.ExpenseTransactionFactory(
+            category=category,
+            amount=100,
+            date=date(year=2023, month=6, day=15),
+        )
+        budget_by_category = {category.id: Decimal("100.00")}
+
+        results, _ = utils.get_transactions_regular_totals(
+            self.month, budget_by_category=budget_by_category
+        )
+
+        self.assertEqual(results[category.id]["progress_percent"], 100)
+
+    def test_progress_percent_over_budget(self):
+        """A category over budget gets progress_percent greater than 100."""
+        category = factories.ExpenseCategoryFactory()
+        factories.ExpenseTransactionFactory(
+            category=category,
+            amount=150,
+            date=date(year=2023, month=6, day=15),
+        )
+        budget_by_category = {category.id: Decimal("100.00")}
+
+        results, _ = utils.get_transactions_regular_totals(
+            self.month, budget_by_category=budget_by_category
+        )
+
+        self.assertEqual(results[category.id]["progress_percent"], 150)
+
+    def test_progress_percent_no_transactions(self):
+        """A budget-only category with no transactions gets 0% progress."""
+        category = factories.ExpenseCategoryFactory()
+        budget_by_category = {category.id: Decimal("100.00")}
+
+        results, _ = utils.get_transactions_regular_totals(
+            self.month, budget_by_category=budget_by_category
+        )
+
+        self.assertEqual(results[category.id]["progress_percent"], 0)
+
+    def test_progress_percent_no_budget(self):
+        """A category with transactions but no budget gets progress_percent=None."""
+        category = factories.ExpenseCategoryFactory()
+        factories.ExpenseTransactionFactory(
+            category=category,
+            amount=50,
+            date=date(year=2023, month=6, day=15),
+        )
+        other_category = factories.ExpenseCategoryFactory()
+        budget_by_category = {other_category.id: Decimal("100.00")}
+
+        results, _ = utils.get_transactions_regular_totals(
+            self.month, budget_by_category=budget_by_category
+        )
+
+        self.assertIsNone(results[category.id]["progress_percent"])
+
+    def test_progress_percent_zero_budget(self):
+        """A category with a budget of 0 gets progress_percent=None (avoids division by zero)."""
+        category = factories.ExpenseCategoryFactory()
+        factories.ExpenseTransactionFactory(
+            category=category,
+            amount=50,
+            date=date(year=2023, month=6, day=15),
+        )
+        budget_by_category = {category.id: Decimal("0.00")}
+
+        results, _ = utils.get_transactions_regular_totals(
+            self.month, budget_by_category=budget_by_category
+        )
+
+        self.assertIsNone(results[category.id]["progress_percent"])
+
+    def test_progress_percent_on_child_category(self):
+        """A child category gets progress_percent on its child entry."""
+        parent = factories.ExpenseCategoryFactory(order=0)
+        child = factories.ExpenseCategoryFactory(parent=parent, order=1)
+        factories.ExpenseTransactionFactory(
+            category=child,
+            amount=30,
+            date=date(year=2023, month=6, day=12),
+        )
+        budget_by_category = {child.id: Decimal("100.00")}
+
+        results, _ = utils.get_transactions_regular_totals(
+            self.month, budget_by_category=budget_by_category
+        )
+
+        child_entry = results[parent.id]["children"][0]
+        self.assertEqual(child_entry["progress_percent"], 30)
+
+    def test_no_progress_without_budget_param(self):
+        """When budget_by_category is not passed, no progress_percent keys exist."""
+        category = factories.ExpenseCategoryFactory()
+        factories.ExpenseTransactionFactory(
+            category=category,
+            amount=50,
+            date=date(year=2023, month=6, day=15),
+        )
+
+        results, _ = utils.get_transactions_regular_totals(self.month)
+
+        self.assertNotIn("progress_percent", results[category.id])
+
+
 class GetOrCreateMonthForDateObjTestCase(TestCase):
     """Test case for the get_or_create_month_for_date_obj() function."""
 

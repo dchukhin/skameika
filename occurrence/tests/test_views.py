@@ -1783,3 +1783,78 @@ class TestTotalsViewBudgetColumn(TestCase):
             response,
             '<td id="budgeted-{}">100.00</td>'.format(category.name),
         )
+
+    def test_totals_progress_bar_expense_under_budget(self):
+        """An expense category under budget shows a green progress bar."""
+        category = factories.ExpenseCategoryFactory()
+        factories.ExpenseTransactionFactory(
+            date=date.today(), category=category, amount=Decimal("50.00")
+        )
+        factories.ExpectedMonthlyCategoryTotalFactory(
+            category=category, month=self.current_month, amount=Decimal("100.00")
+        )
+
+        response = self.client.get(self.url_current_month)
+
+        # 50/100 = 50%
+        self.assertContains(response, "progress-bar-success")
+        self.assertContains(response, "50%")
+
+    def test_totals_progress_bar_expense_over_budget(self):
+        """An expense category over budget shows a red progress bar with actual percentage."""
+        category = factories.ExpenseCategoryFactory()
+        factories.ExpenseTransactionFactory(
+            date=date.today(), category=category, amount=Decimal("150.00")
+        )
+        factories.ExpectedMonthlyCategoryTotalFactory(
+            category=category, month=self.current_month, amount=Decimal("100.00")
+        )
+
+        response = self.client.get(self.url_current_month)
+
+        self.assertContains(response, "progress-bar-danger")
+        # Shows actual percentage (150%), not capped
+        self.assertContains(response, "150%")
+
+    def test_totals_progress_bar_earning_under_budget(self):
+        """An earning category under budget shows a red progress bar."""
+        category = factories.IncomeCategoryFactory()
+        factories.EarningTransactionFactory(
+            date=date.today(), category=category, amount=Decimal("30.00")
+        )
+        factories.ExpectedMonthlyCategoryTotalFactory(
+            category=category, month=self.current_month, amount=Decimal("100.00")
+        )
+
+        response = self.client.get(self.url_current_month)
+
+        # Earnings: under budget = danger
+        self.assertContains(response, "progress-bar-danger")
+        self.assertContains(response, "30%")
+
+    def test_totals_progress_bar_earning_at_budget(self):
+        """An earning category at budget shows a green progress bar."""
+        category = factories.IncomeCategoryFactory()
+        factories.EarningTransactionFactory(
+            date=date.today(), category=category, amount=Decimal("100.00")
+        )
+        factories.ExpectedMonthlyCategoryTotalFactory(
+            category=category, month=self.current_month, amount=Decimal("100.00")
+        )
+
+        response = self.client.get(self.url_current_month)
+
+        self.assertContains(response, "progress-bar-success")
+        self.assertContains(response, "100%")
+
+    def test_totals_no_progress_bar_without_budget(self):
+        """A category without a budget shows no progress bar."""
+        category = factories.ExpenseCategoryFactory()
+        factories.ExpenseTransactionFactory(
+            date=date.today(), category=category, amount=Decimal("50.00")
+        )
+
+        response = self.client.get(self.url_current_month)
+
+        self.assertNotContains(response, "progress-bar-success")
+        self.assertNotContains(response, "progress-bar-danger")

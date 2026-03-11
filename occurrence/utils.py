@@ -53,10 +53,19 @@ def get_transactions_regular_totals(
     if budget_by_category is None:
         budget_by_category = {}
 
+    def _add_progress(entry):
+        """Add progress_percent to an entry that has 'budgeted'."""
+        budgeted = entry.get("budgeted")
+        if budgeted is None or budgeted == 0:
+            entry["progress_percent"] = None
+            return
+        entry["progress_percent"] = int((entry["total"] / budgeted) * 100)
+
     def _make_child(name, total, cat_id=None):
         entry = {"name": name, "total": total}
         if budget_by_category:
             entry["budgeted"] = budget_by_category.get(cat_id)
+            _add_progress(entry)
         return entry
 
     # A list of Categories, their totals, and their children (including
@@ -159,6 +168,11 @@ def get_transactions_regular_totals(
                         "budgeted": budget_by_category.get(cat.id),
                         "children": [],
                     }
+
+    # Compute progress_percent for all entries
+    if budget_by_category:
+        for cat_data in category_dict.values():
+            _add_progress(cat_data)
 
     return category_dict, sum_total
 

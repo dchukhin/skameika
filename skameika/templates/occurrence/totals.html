@@ -7,6 +7,9 @@
     max-width: 420px;
     margin: 0 auto 2em;
   }
+  .progress-budget-bar {
+    min-width: 100px;
+  }
 </style>
 {% endblock %}
 
@@ -28,18 +31,30 @@
       <th>Category</th>
       <th>Total</th>
       <th>Budgeted</th>
+      <th>Progress</th>
     </tr>
   </thead>
   <tbody>
     {% for category in earning_categories.values %}
       <tr class="category-row">
-        <td class="col-sm-6" id="name-{{ category.name }}">{{ category.name }}</td>
+        <td class="col-sm-4" id="name-{{ category.name }}">{{ category.name }}</td>
         <td id="total-{{ category.name }}">{{ category.total }}</td>
         <td id="budgeted-{{ category.name }}">{% if category.budgeted != None %}{{ category.budgeted }}{% else %}-{% endif %}</td>
+        <td>
+          {% if category.progress_percent != None %}
+            <div class="progress progress-budget-bar">
+              <div class="progress-bar {% if category.progress_percent >= 100 %}progress-bar-success{% else %}progress-bar-danger{% endif %}"
+                   role="progressbar" style="width: {% if category.progress_percent > 100 %}100{% else %}{{ category.progress_percent }}{% endif %}%;"
+                   aria-valuenow="{{ category.progress_percent }}" aria-valuemin="0" aria-valuemax="100">
+                {{ category.progress_percent }}%
+              </div>
+            </div>
+          {% endif %}
+        </td>
       </tr>
       {% for child_category in category.children %}
         <tr class="category-row">
-          <td class="col-sm-6" id="name-{{ child_category.name }}">
+          <td class="col-sm-4" id="name-{{ child_category.name }}">
               <span class="col-sm-1"></span>
               {{ child_category.name }}
           </td>
@@ -48,12 +63,24 @@
             {{ child_category.total }}
           </td>
           <td id="budgeted-{{ child_category.name }}">{% if child_category.budgeted != None %}{{ child_category.budgeted }}{% else %}-{% endif %}</td>
+          <td>
+            {% if child_category.progress_percent != None %}
+              <div class="progress progress-budget-bar">
+                <div class="progress-bar {% if child_category.progress_percent >= 100 %}progress-bar-success{% else %}progress-bar-danger{% endif %}"
+                     role="progressbar" style="width: {% if child_category.progress_percent > 100 %}100{% else %}{{ child_category.progress_percent }}{% endif %}%;"
+                     aria-valuenow="{{ child_category.progress_percent }}" aria-valuemin="0" aria-valuemax="100">
+                  {{ child_category.progress_percent }}%
+                </div>
+              </div>
+            {% endif %}
+          </td>
         </tr>
       {% endfor %}
     {% endfor %}
     <tr>
-      <td class="col-sm-6">Total</td>
+      <td class="col-sm-4">Total</td>
       <td>{{ earning_total }}</td>
+      <td></td>
       <td></td>
     </tr>
   </tbody>
@@ -71,18 +98,30 @@
       <th>Category</th>
       <th>Total</th>
       <th>Budgeted</th>
+      <th>Progress</th>
     </tr>
   </thead>
   <tbody>
     {% for category in expense_categories.values %}
       <tr class="category-row">
-        <td class="col-sm-6" id="name-{{ category.name }}">{{ category.name }}</td>
+        <td class="col-sm-4" id="name-{{ category.name }}">{{ category.name }}</td>
         <td id="total-{{ category.name }}">{{ category.total }}</td>
         <td id="budgeted-{{ category.name }}">{% if category.budgeted != None %}{{ category.budgeted }}{% else %}-{% endif %}</td>
+        <td>
+          {% if category.progress_percent != None %}
+            <div class="progress progress-budget-bar">
+              <div class="progress-bar {% if category.progress_percent >= 100 %}progress-bar-danger{% else %}progress-bar-success{% endif %}"
+                   role="progressbar" style="width: {% if category.progress_percent > 100 %}100{% else %}{{ category.progress_percent }}{% endif %}%;"
+                   aria-valuenow="{{ category.progress_percent }}" aria-valuemin="0" aria-valuemax="100">
+                {{ category.progress_percent }}%
+              </div>
+            </div>
+          {% endif %}
+        </td>
       </tr>
       {% for child_category in category.children %}
         <tr class="category-row">
-          <td class="col-sm-6" id="name-{{ child_category.name }}">
+          <td class="col-sm-4" id="name-{{ child_category.name }}">
               <span class="col-sm-1"></span>
               {{ child_category.name }}
           </td>
@@ -91,12 +130,24 @@
             {{ child_category.total }}
           </td>
           <td id="budgeted-{{ child_category.name }}">{% if child_category.budgeted != None %}{{ child_category.budgeted }}{% else %}-{% endif %}</td>
+          <td>
+            {% if child_category.progress_percent != None %}
+              <div class="progress progress-budget-bar">
+                <div class="progress-bar {% if child_category.progress_percent >= 100 %}progress-bar-danger{% else %}progress-bar-success{% endif %}"
+                     role="progressbar" style="width: {% if child_category.progress_percent > 100 %}100{% else %}{{ child_category.progress_percent }}{% endif %}%;"
+                     aria-valuenow="{{ child_category.progress_percent }}" aria-valuemin="0" aria-valuemax="100">
+                  {{ child_category.progress_percent }}%
+                </div>
+              </div>
+            {% endif %}
+          </td>
         </tr>
       {% endfor %}
     {% endfor %}
     <tr>
-      <td class="col-sm-6">Total</td>
+      <td class="col-sm-4">Total</td>
       <td>{{ expense_total }}</td>
+      <td></td>
       <td></td>
     </tr>
   </tbody>
@@ -107,8 +158,9 @@
 <table class="table">
   <tbody>
     <tr>
-      <td class="col-sm-6">Total</td>
+      <td class="col-sm-4">Total</td>
       <td>{{ total }}</td>
+      <td></td>
       <td></td>
     </tr>
   </tbody>
