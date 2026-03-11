@@ -108,13 +108,16 @@
 <h3>Copy Budget</h3>
 <form action="{% url 'copy_budget' %}" method="POST" class="form-inline">
   {% csrf_token %}
-  <input type="hidden" name="target_month" value="{{ active_month.slug }}">
   <label for="source_month">Copy budget from:</label>
   <select name="source_month" id="source_month" class="form-control">
     {% for month in months %}
-      {% if month != active_month %}
-        <option value="{{ month.slug }}">{{ month }}</option>
-      {% endif %}
+      <option value="{{ month.slug }}">{{ month }}</option>
+    {% endfor %}
+  </select>
+  <label for="target_month">to:</label>
+  <select name="target_month" id="target_month" class="form-control">
+    {% for month in months %}
+      <option value="{{ month.slug }}" {% if month == active_month %}selected{% endif %}>{{ month }}</option>
     {% endfor %}
   </select>
   <button type="submit" class="btn btn-primary">Copy</button>
