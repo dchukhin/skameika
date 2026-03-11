@@ -412,6 +412,268 @@ class GetTransactionsRegularTotalsTestCase(TestCase):
         self.assertEqual(expected_sum_total, total)
 
 
+class GetTransactionsRegularTotalsWithBudgetTestCase(TestCase):
+    """Test case for the budget_by_category parameter of get_transactions_regular_totals()."""
+
+    def setUp(self):
+        super().setUp()
+        self.month = factories.MonthFactory(year=2023, month=6, name="June, 2023")
+        self.DECIMAL_01 = Decimal(10) ** (-2)
+
+    def test_no_budget_returns_no_budgeted_keys(self):
+        """When budget_by_category is not passed, entries have no 'budgeted' key."""
+        category = factories.ExpenseCategoryFactory()
+        factories.ExpenseTransactionFactory(
+            category=category,
+            amount=100,
+            date=date(year=2023, month=6, day=15),
+        )
+        results, _ = utils.get_transactions_regular_totals(self.month)
+        for cat_data in results.values():
+            self.assertNotIn("budgeted", cat_data)
+
+    def test_empty_budget_returns_no_budgeted_keys(self):
+        """When budget_by_category is an empty dict, entries have no 'budgeted' key."""
+        category = factories.ExpenseCategoryFactory()
+        factories.ExpenseTransactionFactory(
+            category=category,
+            amount=100,
+            date=date(year=2023, month=6, day=15),
+        )
+        results, _ = utils.get_transactions_regular_totals(
+            self.month, budget_by_category={}
+        )
+        for cat_data in results.values():
+            self.assertNotIn("budgeted", cat_data)
+
+    def test_budget_attached_to_category_with_transactions(self):
+        """A category with both transactions and a budget gets the correct budgeted value."""
+        category = factories.ExpenseCategoryFactory()
+        factories.ExpenseTransactionFactory(
+            category=category,
+            amount=50,
+            date=date(year=2023, month=6, day=10),
+        )
+        budget_amount = Decimal("200.00")
+        budget_by_category = {category.id: budget_amount}
+
+        results, total = utils.get_transactions_regular_totals(
+            self.month, budget_by_category=budget_by_category
+        )
+
+        self.assertIn(category.id, results)
+        self.assertEqual(results[category.id]["budgeted"], budget_amount)
+        self.assertEqual(
+            results[category.id]["total"],
+            Decimal("50").quantize(self.DECIMAL_01),
+        )
+
+    def test_budget_with_no_transactions_adds_category(self):
+        """A category with a budget but no transactions appears with total of 0."""
+        category = factories.ExpenseCategoryFactory()
+        budget_amount = Decimal("300.00")
+        budget_by_category = {category.id: budget_amount}
+
+        results, total = utils.get_transactions_regular_totals(
+            self.month, budget_by_category=budget_by_category
+        )
+
+        self.assertIn(category.id, results)
+        self.assertEqual(results[category.id]["total"], 0)
+        self.assertEqual(results[category.id]["budgeted"], budget_amount)
+        self.assertEqual(results[category.id]["children"], [])
+
+    def test_budget_only_category_wrong_type_excluded(self):
+        """A budget-only category of the wrong type_cat is not included."""
+        earning_category = factories.IncomeCategoryFactory()
+        budget_by_category = {earning_category.id: Decimal("100.00")}
+
+        results, _ = utils.get_transactions_regular_totals(
+            self.month,
+            type_cat=models.Category.TYPE_EXPENSE,
+            budget_by_category=budget_by_category,
+        )
+
+        self.assertNotIn(earning_category.id, results)
+
+    def test_budget_only_category_running_type_excluded(self):
+        """A budget-only category with running total_type is not included."""
+        category = factories.ExpenseCategoryFactory(
+            total_type=models.Category.TOTAL_TYPE_RUNNING
+        )
+        budget_by_category = {category.id: Decimal("100.00")}
+
+        results, _ = utils.get_transactions_regular_totals(
+            self.month, budget_by_category=budget_by_category
+        )
+
+        self.assertNotIn(category.id, results)
+
+    def test_category_without_budget_gets_none(self):
+        """A category with transactions but no budget entry gets budgeted=None."""
+        category = factories.ExpenseCategoryFactory()
+        factories.ExpenseTransactionFactory(
+            category=category,
+            amount=75,
+            date=date(year=2023, month=6, day=5),
+        )
+        # Budget for a different category
+        other_category = factories.ExpenseCategoryFactory()
+        budget_by_category = {other_category.id: Decimal("50.00")}
+
+        results, _ = utils.get_transactions_regular_totals(
+            self.month, budget_by_category=budget_by_category
+        )
+
+        self.assertIn(category.id, results)
+        self.assertIsNone(results[category.id]["budgeted"])
+
+    def test_budget_on_child_category_with_transactions(self):
+        """A child category with both transactions and a budget gets the budgeted value."""
+        parent = factories.ExpenseCategoryFactory(order=0)
+        child = factories.ExpenseCategoryFactory(parent=parent, order=1)
+        factories.ExpenseTransactionFactory(
+            category=child,
+            amount=40,
+            date=date(year=2023, month=6, day=12),
+        )
+        budget_by_category = {child.id: Decimal("100.00")}
+
+        results, _ = utils.get_transactions_regular_totals(
+            self.month, budget_by_category=budget_by_category
+        )
+
+        self.assertIn(parent.id, results)
+        self.assertEqual(len(results[parent.id]["children"]), 1)
+        self.assertEqual(results[parent.id]["children"][0]["budgeted"], Decimal("100.00"))
+
+    def test_budget_on_child_category_no_transactions(self):
+        """A child category with a budget but no transactions is added under its parent."""
+        parent = factories.ExpenseCategoryFactory(order=0)
+        child = factories.ExpenseCategoryFactory(parent=parent, order=1)
+        budget_by_category = {child.id: Decimal("150.00")}
+
+        results, _ = utils.get_transactions_regular_totals(
+            self.month, budget_by_category=budget_by_category
+        )
+
+        self.assertIn(parent.id, results)
+        self.assertEqual(results[parent.id]["total"], 0)
+        self.assertEqual(len(results[parent.id]["children"]), 1)
+        self.assertEqual(results[parent.id]["children"][0]["name"], child.name)
+        self.assertEqual(results[parent.id]["children"][0]["total"], 0)
+        self.assertEqual(results[parent.id]["children"][0]["budgeted"], Decimal("150.00"))
+
+    def test_budget_on_parent_category(self):
+        """A parent category with a budget gets the budgeted value on the parent entry."""
+        parent = factories.ExpenseCategoryFactory(order=0)
+        child = factories.ExpenseCategoryFactory(parent=parent, order=1)
+        factories.ExpenseTransactionFactory(
+            category=child,
+            amount=60,
+            date=date(year=2023, month=6, day=20),
+        )
+        budget_by_category = {parent.id: Decimal("200.00")}
+
+        results, _ = utils.get_transactions_regular_totals(
+            self.month, budget_by_category=budget_by_category
+        )
+
+        self.assertIn(parent.id, results)
+        self.assertEqual(results[parent.id]["budgeted"], Decimal("200.00"))
+
+    def test_multiple_categories_mixed_budget(self):
+        """Multiple categories where some have budgets and some don't."""
+        cat_with_budget = factories.ExpenseCategoryFactory()
+        cat_without_budget = factories.ExpenseCategoryFactory()
+        cat_budget_only = factories.ExpenseCategoryFactory()
+
+        factories.ExpenseTransactionFactory(
+            category=cat_with_budget,
+            amount=100,
+            date=date(year=2023, month=6, day=1),
+        )
+        factories.ExpenseTransactionFactory(
+            category=cat_without_budget,
+            amount=200,
+            date=date(year=2023, month=6, day=2),
+        )
+
+        budget_by_category = {
+            cat_with_budget.id: Decimal("150.00"),
+            cat_budget_only.id: Decimal("75.00"),
+        }
+
+        results, total = utils.get_transactions_regular_totals(
+            self.month, budget_by_category=budget_by_category
+        )
+
+        # Category with both transaction and budget
+        self.assertEqual(results[cat_with_budget.id]["budgeted"], Decimal("150.00"))
+        self.assertEqual(
+            results[cat_with_budget.id]["total"],
+            Decimal("100").quantize(self.DECIMAL_01),
+        )
+
+        # Category with transaction but no budget
+        self.assertIsNone(results[cat_without_budget.id]["budgeted"])
+
+        # Category with budget but no transaction
+        self.assertEqual(results[cat_budget_only.id]["budgeted"], Decimal("75.00"))
+        self.assertEqual(results[cat_budget_only.id]["total"], 0)
+
+        # Sum total only includes actual transactions, not budget-only categories
+        self.assertEqual(total, Decimal("300").quantize(self.DECIMAL_01))
+
+    def test_earning_type_with_budget(self):
+        """Budget works correctly when type_cat is earning."""
+        category = factories.IncomeCategoryFactory()
+        factories.EarningTransactionFactory(
+            category=category,
+            amount=500,
+            date=date(year=2023, month=6, day=15),
+        )
+        budget_by_category = {category.id: Decimal("600.00")}
+
+        results, total = utils.get_transactions_regular_totals(
+            self.month,
+            type_cat=models.Category.TYPE_EARNING,
+            budget_by_category=budget_by_category,
+        )
+
+        self.assertIn(category.id, results)
+        self.assertEqual(results[category.id]["budgeted"], Decimal("600.00"))
+
+    def test_budget_only_child_added_to_existing_parent(self):
+        """A budget-only child is appended when its parent already exists from transactions."""
+        parent = factories.ExpenseCategoryFactory(order=0)
+        child_with_trans = factories.ExpenseCategoryFactory(parent=parent, order=1)
+        child_budget_only = factories.ExpenseCategoryFactory(parent=parent, order=2)
+
+        factories.ExpenseTransactionFactory(
+            category=child_with_trans,
+            amount=80,
+            date=date(year=2023, month=6, day=10),
+        )
+        budget_by_category = {child_budget_only.id: Decimal("120.00")}
+
+        results, _ = utils.get_transactions_regular_totals(
+            self.month, budget_by_category=budget_by_category
+        )
+
+        self.assertIn(parent.id, results)
+        child_names = [c["name"] for c in results[parent.id]["children"]]
+        self.assertIn(child_with_trans.name, child_names)
+        self.assertIn(child_budget_only.name, child_names)
+
+        # The budget-only child should have total 0 and correct budget
+        budget_only_child = next(
+            c for c in results[parent.id]["children"] if c["name"] == child_budget_only.name
+        )
+        self.assertEqual(budget_only_child["total"], 0)
+        self.assertEqual(budget_only_child["budgeted"], Decimal("120.00"))
+
+
 class GetOrCreateMonthForDateObjTestCase(TestCase):
     """Test case for the get_or_create_month_for_date_obj() function."""
 

@@ -7,8 +7,19 @@ from django.utils.text import slugify
 from . import models
 
 
-def get_transactions_regular_totals(month=None, type_cat=models.Category.TYPE_EXPENSE):
-    """Get the totals for Categories, including children Categories."""
+def get_transactions_regular_totals(
+    month=None, type_cat=models.Category.TYPE_EXPENSE, budget_by_category=None
+):
+    """Get the totals for Categories, including children Categories.
+
+    Args:
+        month: Optional Month to filter transactions by.
+        type_cat: The category type (expense or earning).
+        budget_by_category: Optional dict mapping category_id to budgeted amount.
+            When provided, each category entry in the returned dict will include
+            a "budgeted" key. Categories that have a budget but no transactions
+            will also be included with a total of 0.
+    """
     # Raise an error if type_cat is not valid
     if type_cat not in [name for (name, label) in models.Category.TYPE_CHOICES]:
         raise ValidationError("{} is not a valid type_cat".format(type_cat))
@@ -39,9 +50,21 @@ def get_transactions_regular_totals(month=None, type_cat=models.Category.TYPE_EX
 
         sum_total = category_totals.aggregate(grand_total=Sum("total"))["grand_total"] or 0
 
+    if budget_by_category is None:
+        budget_by_category = {}
+
+    def _make_child(name, total, cat_id=None):
+        entry = {"name": name, "total": total}
+        if budget_by_category:
+            entry["budgeted"] = budget_by_category.get(cat_id)
+        return entry
+
     # A list of Categories, their totals, and their children (including
     # their children's totals)
     category_dict = {}
+    # Track which budgeted category IDs have been handled
+    seen_category_ids = set()
+
     # Loop through the category_totals, and add categories to category_dict,
     # as well as adding their parent Category (if applicable)
     for category_data in category_totals.values(
@@ -52,8 +75,12 @@ def get_transactions_regular_totals(month=None, type_cat=models.Category.TYPE_EX
         "category__parent",
         "category__parent__name",
     ).order_by("category__order", "category__name"):
+        cat_id = category_data["category__id"]
+        seen_category_ids.add(cat_id)
+
         if category_data["category__parent"]:
             parent_id = category_data["category__parent"]
+            seen_category_ids.add(parent_id)
             if parent_id in category_dict.keys():
                 # Add this total to the parent's total
                 category_dict[parent_id]["total"] += category_data["total"]
@@ -61,33 +88,77 @@ def get_transactions_regular_totals(month=None, type_cat=models.Category.TYPE_EX
                 index = category_data["category__order"]
                 category_dict[parent_id]["children"].insert(
                     index,
-                    {
-                        "name": category_data["category__name"],
-                        "total": category_data["total"],
-                    },
+                    _make_child(
+                        category_data["category__name"],
+                        category_data["total"],
+                        cat_id,
+                    ),
                 )
             else:
                 category_dict[parent_id] = {
                     "name": category_data["category__parent__name"],
                     "total": category_data["total"],
                     "children": [
-                        {
-                            "name": category_data["category__name"],
-                            "total": category_data["total"],
-                        }
+                        _make_child(
+                            category_data["category__name"],
+                            category_data["total"],
+                            cat_id,
+                        )
                     ],
                 }
+                if budget_by_category:
+                    category_dict[parent_id]["budgeted"] = budget_by_category.get(
+                        parent_id
+                    )
         else:
             # If this Category is already in the category_dict, then just add
             # its amount to the total already there
-            if category_data["category__id"] in category_dict.keys():
-                category_dict[category_data["category__id"]]["total"] += category_data["total"]
+            if cat_id in category_dict.keys():
+                category_dict[cat_id]["total"] += category_data["total"]
             else:
-                category_dict[category_data["category__id"]] = {
+                category_dict[cat_id] = {
                     "name": category_data["category__name"],
                     "total": category_data["total"],
                     "children": [],
                 }
+                if budget_by_category:
+                    category_dict[cat_id]["budgeted"] = budget_by_category.get(cat_id)
+
+    # Add categories that have a budget but no transactions
+    if budget_by_category:
+        budget_only_cats = models.Category.objects.filter(
+            id__in=set(budget_by_category.keys()) - seen_category_ids,
+            total_type=models.Category.TOTAL_TYPE_REGULAR,
+            type_cat=type_cat,
+        ).select_related("parent")
+        for cat in budget_only_cats:
+            if cat.parent_id:
+                if cat.parent_id not in category_dict:
+                    category_dict[cat.parent_id] = {
+                        "name": cat.parent.name,
+                        "total": 0,
+                        "budgeted": budget_by_category.get(cat.parent_id),
+                        "children": [
+                            _make_child(cat.name, 0, cat.id)
+                        ],
+                    }
+                # If parent exists but this child isn't there yet, add it
+                else:
+                    child_names = {
+                        c["name"] for c in category_dict[cat.parent_id]["children"]
+                    }
+                    if cat.name not in child_names:
+                        category_dict[cat.parent_id]["children"].append(
+                            _make_child(cat.name, 0, cat.id)
+                        )
+            else:
+                if cat.id not in category_dict:
+                    category_dict[cat.id] = {
+                        "name": cat.name,
+                        "total": 0,
+                        "budgeted": budget_by_category.get(cat.id),
+                        "children": [],
+                    }
 
     return category_dict, sum_total
 
