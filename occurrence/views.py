@@ -114,12 +114,24 @@ def totals(request, *args, **kwargs):
     # Get the MonthlyStatistic for this Month
     monthly_statistics = models.MonthlyStatistic.objects.filter(month=month)
 
+    expense_budget_total = sum(
+        cat["budgeted"] for cat in expense_categories.values() if cat.get("budgeted") is not None
+    ) or None
+    earning_budget_total = sum(
+        cat["budgeted"] for cat in earning_categories.values() if cat.get("budgeted") is not None
+    ) or None
+
     context = {
         "expense_categories": expense_categories,
         "expense_total": expense_total,
+        "expense_budget_total": expense_budget_total,
         "earning_categories": earning_categories,
         "earning_total": earning_total,
+        "earning_budget_total": earning_budget_total,
         "total": earning_total - expense_total,
+        "budget_total": (earning_budget_total - expense_budget_total)
+        if earning_budget_total is not None and expense_budget_total is not None
+        else None,
         "monthly_statistics": monthly_statistics,
         "months": models.Month.objects.all(),
         "active_month": month,

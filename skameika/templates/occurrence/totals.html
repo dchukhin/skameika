@@ -80,7 +80,7 @@
     <tr>
       <td class="col-sm-4">Total</td>
       <td>{{ earning_total }}</td>
-      <td></td>
+      <td>{% if earning_budget_total != None %}{{ earning_budget_total }}{% else %}-{% endif %}</td>
       <td></td>
     </tr>
   </tbody>
@@ -147,7 +147,7 @@
     <tr>
       <td class="col-sm-4">Total</td>
       <td>{{ expense_total }}</td>
-      <td></td>
+      <td>{% if expense_budget_total != None %}{{ expense_budget_total }}{% else %}-{% endif %}</td>
       <td></td>
     </tr>
   </tbody>
@@ -160,7 +160,7 @@
     <tr>
       <td class="col-sm-4">Total</td>
       <td>{{ total }}</td>
-      <td></td>
+      <td>{% if budget_total != None %}{{ budget_total }}{% else %}-{% endif %}</td>
       <td></td>
     </tr>
   </tbody>

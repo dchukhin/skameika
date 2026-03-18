@@ -1858,3 +1858,112 @@ class TestTotalsViewBudgetColumn(TestCase):
 
         self.assertNotContains(response, "progress-bar-success")
         self.assertNotContains(response, "progress-bar-danger")
+
+    def test_expense_budget_total_in_context(self):
+        """expense_budget_total sums all expense category budgets."""
+        cat1 = factories.ExpenseCategoryFactory()
+        cat2 = factories.ExpenseCategoryFactory()
+        factories.ExpenseTransactionFactory(date=date.today(), category=cat1, amount=Decimal("30.00"))
+        factories.ExpenseTransactionFactory(date=date.today(), category=cat2, amount=Decimal("20.00"))
+        factories.ExpectedMonthlyCategoryTotalFactory(
+            category=cat1, month=self.current_month, amount=Decimal("100.00")
+        )
+        factories.ExpectedMonthlyCategoryTotalFactory(
+            category=cat2, month=self.current_month, amount=Decimal("200.00")
+        )
+
+        response = self.client.get(self.url_current_month)
+
+        self.assertEqual(response.context["expense_budget_total"], Decimal("300.00"))
+
+    def test_earning_budget_total_in_context(self):
+        """earning_budget_total sums all earning category budgets."""
+        cat1 = factories.IncomeCategoryFactory()
+        cat2 = factories.IncomeCategoryFactory()
+        factories.EarningTransactionFactory(date=date.today(), category=cat1, amount=Decimal("50.00"))
+        factories.EarningTransactionFactory(date=date.today(), category=cat2, amount=Decimal("75.00"))
+        factories.ExpectedMonthlyCategoryTotalFactory(
+            category=cat1, month=self.current_month, amount=Decimal("500.00")
+        )
+        factories.ExpectedMonthlyCategoryTotalFactory(
+            category=cat2, month=self.current_month, amount=Decimal("250.00")
+        )
+
+        response = self.client.get(self.url_current_month)
+
+        self.assertEqual(response.context["earning_budget_total"], Decimal("750.00"))
+
+    def test_budget_total_none_when_no_budgets(self):
+        """Budget totals are None when no categories have budgets."""
+        factories.ExpenseTransactionFactory(
+            date=date.today(),
+            category=factories.ExpenseCategoryFactory(),
+            amount=Decimal("50.00"),
+        )
+
+        response = self.client.get(self.url_current_month)
+
+        self.assertIsNone(response.context["expense_budget_total"])
+
+    def test_expense_budget_total_shown_in_total_row(self):
+        """The expense total row shows the summed budget total."""
+        category = factories.ExpenseCategoryFactory()
+        factories.ExpenseTransactionFactory(date=date.today(), category=category, amount=Decimal("50.00"))
+        factories.ExpectedMonthlyCategoryTotalFactory(
+            category=category, month=self.current_month, amount=Decimal("200.00")
+        )
+
+        response = self.client.get(self.url_current_month)
+
+        self.assertContains(response, "200")
+
+    def test_earning_budget_total_shown_in_total_row(self):
+        """The earning total row shows the summed budget total."""
+        category = factories.IncomeCategoryFactory()
+        factories.EarningTransactionFactory(date=date.today(), category=category, amount=Decimal("50.00"))
+        factories.ExpectedMonthlyCategoryTotalFactory(
+            category=category, month=self.current_month, amount=Decimal("300.00")
+        )
+
+        response = self.client.get(self.url_current_month)
+
+        self.assertContains(response, "300")
+
+    def test_expense_total_row_shows_dash_when_no_budget(self):
+        """The expense total row shows '-' for budget when no budgets are set."""
+        category = factories.ExpenseCategoryFactory()
+        factories.ExpenseTransactionFactory(date=date.today(), category=category, amount=Decimal("50.00"))
+
+        response = self.client.get(self.url_current_month)
+
+        self.assertContains(response, "<td>-</td>")
+
+    def test_grand_budget_total_in_context(self):
+        """budget_total is earning_budget_total minus expense_budget_total."""
+        expense_cat = factories.ExpenseCategoryFactory()
+        earning_cat = factories.IncomeCategoryFactory()
+        factories.ExpenseTransactionFactory(date=date.today(), category=expense_cat, amount=Decimal("50.00"))
+        factories.EarningTransactionFactory(date=date.today(), category=earning_cat, amount=Decimal("80.00"))
+        factories.ExpectedMonthlyCategoryTotalFactory(
+            category=expense_cat, month=self.current_month, amount=Decimal("200.00")
+        )
+        factories.ExpectedMonthlyCategoryTotalFactory(
+            category=earning_cat, month=self.current_month, amount=Decimal("500.00")
+        )
+
+        response = self.client.get(self.url_current_month)
+
+        self.assertEqual(response.context["budget_total"], Decimal("300.00"))
+
+    def test_grand_budget_total_none_when_missing_budget(self):
+        """budget_total is None when either earnings or expenses have no budget."""
+        expense_cat = factories.ExpenseCategoryFactory()
+        factories.ExpenseTransactionFactory(date=date.today(), category=expense_cat, amount=Decimal("50.00"))
+        factories.ExpectedMonthlyCategoryTotalFactory(
+            category=expense_cat, month=self.current_month, amount=Decimal("200.00")
+        )
+        # No earning budget set
+
+        response = self.client.get(self.url_current_month)
+
+        self.assertIsNone(response.context["budget_total"])
