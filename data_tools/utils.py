@@ -132,13 +132,13 @@ def ingest_csv(csv_import):
                 if not category:
                     category = categories.first()
 
-            # Override category with CategoryMapping if one exists for this description
-            mapped_category = get_mapped_category(row["Description"], category_mappings)
-            if mapped_category is not None:
-                category = mapped_category
-
             # Get the mapped title for this transaction
             mapped_title = get_mapped_title(row["Description"], title_mappings)
+
+            # Override category with CategoryMapping if one exists for this description
+            mapped_category = get_mapped_category(mapped_title, category_mappings)
+            if mapped_category is not None:
+                category = mapped_category
 
             # Check if the transaction already exists based on title, amount, and date
             if transaction_type.lower() == "income":

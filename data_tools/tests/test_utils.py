@@ -272,3 +272,61 @@ class IngestCSVTest(TestCase):
         # Unchanged: "Test Restaurant 1" gets food_and_drink from CSV column
         restaurant_1 = ExpenseTransaction.objects.get(title="Test Restaurant 1")
         self.assertEqual(restaurant_1.category, self.category_food_and_drink)
+
+    def test_category_mapping_uses_mapped_title(self):
+        """CategoryMapping is matched against the mapped title, not the original description."""
+        # TitleMapping renames "Test Restaurant 1" → "Restaurant One"
+        TitleMapping.objects.create(
+            source_title="Test Restaurant 1",
+            canonical_title="Restaurant One",
+        )
+        # CategoryMapping on the canonical title "Restaurant One" → other
+        CategoryMapping.objects.create(
+            source_title="Restaurant One",
+            category=self.category_other,
+        )
+
+        csv_file_path = os.path.join(os.path.dirname(__file__), "example.csv")
+        with open(csv_file_path, "rb") as the_file:
+            self.csv_import.file = SimpleUploadedFile(
+                "example.csv", the_file.read(), content_type="text/csv"
+            )
+            self.csv_import.save()
+
+        count_transactions_created, errors = ingest_csv(self.csv_import)
+
+        self.assertEqual(count_transactions_created, 3)
+        self.assertEqual(errors, [])
+
+        # "Restaurant One" (mapped from "Test Restaurant 1") should use the CategoryMapping
+        restaurant_1 = ExpenseTransaction.objects.get(title="Restaurant One")
+        self.assertEqual(restaurant_1.category, self.category_other)
+
+    def test_category_mapping_on_original_title_ignored_when_title_mapping_exists(self):
+        """A CategoryMapping keyed on the original description has no effect when a
+        TitleMapping renames that description first."""
+        TitleMapping.objects.create(
+            source_title="Test Restaurant 1",
+            canonical_title="Restaurant One",
+        )
+        # CategoryMapping uses the *original* description — should NOT match after renaming
+        CategoryMapping.objects.create(
+            source_title="Test Restaurant 1",
+            category=self.category_other,
+        )
+
+        csv_file_path = os.path.join(os.path.dirname(__file__), "example.csv")
+        with open(csv_file_path, "rb") as the_file:
+            self.csv_import.file = SimpleUploadedFile(
+                "example.csv", the_file.read(), content_type="text/csv"
+            )
+            self.csv_import.save()
+
+        count_transactions_created, errors = ingest_csv(self.csv_import)
+
+        self.assertEqual(count_transactions_created, 3)
+        self.assertEqual(errors, [])
+
+        # CategoryMapping on the original title is ignored; falls back to the CSV column
+        restaurant_1 = ExpenseTransaction.objects.get(title="Restaurant One")
+        self.assertEqual(restaurant_1.category, self.category_food_and_drink)
