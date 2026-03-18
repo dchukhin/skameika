@@ -96,7 +96,7 @@ class TransactionBase(models.Model):
     pending = models.BooleanField(default=False)
     csv_import = models.ForeignKey(
         CSVImport,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         null=True,
         blank=True,
         help_text="The CSV import this transaction was created from."
