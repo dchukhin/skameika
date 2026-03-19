@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en" class="no-js">
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <title>{% block title %}{% endblock %}</title>
@@ -10,9 +10,7 @@
     <meta name="keywords" content="{% block meta-keywords %}{% endblock %}">
     {% block extra-meta %}{% endblock %}
     <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
-    <link rel="stylesheet" type="text/css" media="all" href="{% static 'css/bundle.css' %}?rev={{ REVISION }}">
     {% block extra-css %}{% endblock %}
-    <script src="{% static 'libs/modernizr.js' %}"></script>
 </head>
 <body>
     {% if messages %}
@@ -43,7 +41,6 @@
         {% block content %}{% endblock %}
     </div>
     <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
-    <script src="{% static 'js/bundle.js' %}?rev={{ REVISION }}"></script>
     {% block extra-js %}{% endblock %}
 </body>
 </html>
