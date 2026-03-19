@@ -153,14 +153,16 @@
 </form>
 
 <nav>
-  <ul class="pagination">
-    {% for month in months %}
-      <li class="page-item {% if current_month == month %}active{% endif %}">
-        <a class="page-link" href="{% url "transactions" %}?month={{ month.slug }}">
-          {{ month }}
-        </a>
-      </li>
-    {% endfor %}
-  </ul>
+  <div class="overflow-auto mw-100">
+    <ul class="pagination flex-nowrap d-inline-flex">
+      {% for month in months %}
+        <li class="page-item {% if current_month == month %}active{% endif %}">
+          <a class="page-link" href="{% url "transactions" %}?month={{ month.slug }}">
+            {{ month }}
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
 </nav>
 {% endblock content %}
