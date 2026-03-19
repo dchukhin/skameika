@@ -31,7 +31,7 @@
           <a href="{% url 'edit_budget_row' row.id %}">Edit</a>
           <form action="{% url 'delete_budget_row' row.id %}" method="POST" style="display:inline;">
             {% csrf_token %}
-            <button type="submit" class="btn btn-danger btn-xs">Delete</button>
+            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
           </form>
         </td>
       </tr>
@@ -70,7 +70,7 @@
           <a href="{% url 'edit_budget_row' row.id %}">Edit</a>
           <form action="{% url 'delete_budget_row' row.id %}" method="POST" style="display:inline;">
             {% csrf_token %}
-            <button type="submit" class="btn btn-danger btn-xs">Delete</button>
+            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
           </form>
         </td>
       </tr>
@@ -96,8 +96,8 @@
 <nav>
   <ul class="pagination">
     {% for month in months %}
-      <li class="{% if active_month == month %}active{% endif %}">
-        <a href="{% url 'budget' %}?month={{ month.slug }}">
+      <li class="page-item {% if active_month == month %}active{% endif %}">
+        <a class="page-link" href="{% url 'budget' %}?month={{ month.slug }}">
           {{ month }}
         </a>
       </li>
@@ -106,7 +106,7 @@
 </nav>
 
 <h3>Copy Budget</h3>
-<form action="{% url 'copy_budget' %}" method="POST" class="form-inline">
+<form action="{% url 'copy_budget' %}" method="POST" class="d-flex flex-wrap align-items-center gap-2">
   {% csrf_token %}
   <label for="source_month">Copy budget from:</label>
   <select name="source_month" id="source_month" class="form-control">

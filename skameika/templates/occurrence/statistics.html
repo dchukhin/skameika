@@ -8,7 +8,7 @@
 <h2>Statistics Over Time</h2>
 
 <form method="get" action="{% url 'statistics_chart_view' %}">
-  <div class="form-group">
+  <div class="mb-3">
     <label for="statistic">Statistic</label>
     <select id="statistic" name="statistic" class="form-control">
       <option value="">---------</option>
@@ -17,7 +17,7 @@
       {% endfor %}
     </select>
   </div>
-  <div class="form-group">
+  <div class="mb-3">
     <label for="start_month">Start Month</label>
     <select id="start_month" name="start_month" class="form-control">
       <option value="">---------</option>
@@ -26,7 +26,7 @@
       {% endfor %}
     </select>
   </div>
-  <div class="form-group">
+  <div class="mb-3">
     <label for="end_month">End Month</label>
     <select id="end_month" name="end_month" class="form-control">
       <option value="">---------</option>

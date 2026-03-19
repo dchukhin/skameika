@@ -155,8 +155,8 @@
 <nav>
   <ul class="pagination">
     {% for month in months %}
-      <li class="{% if current_month == month %}active{% endif %}">
-        <a href="{% url "transactions" %}?month={{ month.slug }}">
+      <li class="page-item {% if current_month == month %}active{% endif %}">
+        <a class="page-link" href="{% url "transactions" %}?month={{ month.slug }}">
           {{ month }}
         </a>
       </li>
