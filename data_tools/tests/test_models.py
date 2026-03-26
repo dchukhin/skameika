@@ -1,4 +1,5 @@
 from django.test import TestCase
+
 from data_tools.models import CSVImport
 
 
@@ -9,7 +10,5 @@ class CSVImportModelTest(TestCase):
         )
 
     def test_str_method(self):
-        expected_str = (
-            f"CSV Import on {self.csv_import.created_at.strftime('%Y-%m-%d %H:%M:%S')}"
-        )
+        expected_str = f"CSV Import on {self.csv_import.created_at.strftime('%Y-%m-%d %H:%M:%S')}"
         self.assertEqual(str(self.csv_import), expected_str)

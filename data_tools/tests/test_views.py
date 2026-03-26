@@ -1,9 +1,9 @@
 import os
 
+from django.contrib.messages import get_messages
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
-from django.core.files.uploadedfile import SimpleUploadedFile
-from django.contrib.messages import get_messages
 
 from data_tools.models import CSVImport
 from occurrence.models import Category, EarningTransaction, ExpenseTransaction, Month
@@ -39,9 +39,7 @@ class UploadCSVViewTests(TestCase):
             )
 
         # Create an invalid CSV file for testing.
-        invalid_csv_file_path = os.path.join(
-            os.path.dirname(__file__), "example_invalid_date.csv"
-        )
+        invalid_csv_file_path = os.path.join(os.path.dirname(__file__), "example_invalid_date.csv")
         with open(invalid_csv_file_path, "rb") as the_file:
             cls.invalid_csv_file = SimpleUploadedFile(
                 "example.csv", the_file.read(), content_type="text/csv"
@@ -73,9 +71,7 @@ class UploadCSVViewTests(TestCase):
         # Check for success message
         messages = list(get_messages(response.wsgi_request))
         self.assertEqual(len(messages), 1)
-        self.assertEqual(
-            str(messages[0]), "CSV file uploaded. 3 transaction(s) created."
-        )
+        self.assertEqual(str(messages[0]), "CSV file uploaded. 3 transaction(s) created.")
 
         # Check that a CSVImport object was created
         self.assertEqual(CSVImport.objects.count(), 1)
@@ -92,9 +88,7 @@ class UploadCSVViewTests(TestCase):
             reverse("upload_csv"),
             {"file": self.invalid_csv_file},
         )
-        self.assertEqual(
-            response.status_code, 200
-        )  # Check for rendering the form again
+        self.assertEqual(response.status_code, 200)  # Check for rendering the form again
 
         # Check for error message
         messages = list(get_messages(response.wsgi_request))
@@ -114,9 +108,7 @@ class UploadCSVViewTests(TestCase):
             reverse("upload_csv"),
             {"file": self.non_csv_file},
         )
-        self.assertEqual(
-            response.status_code, 200
-        )  # Check for rendering the form again
+        self.assertEqual(response.status_code, 200)  # Check for rendering the form again
 
         # Check for error message
         messages = list(get_messages(response.wsgi_request))

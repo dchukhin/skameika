@@ -1,10 +1,9 @@
 import datetime
 
-from django.utils.text import slugify
-
 import factory
 import factory.django
 import factory.fuzzy
+from django.utils.text import slugify
 
 from .. import models
 

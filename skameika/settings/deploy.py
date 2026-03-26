@@ -1,6 +1,7 @@
 # Settings for live deployed environments: vagrant, staging, production, etc
-from .base import *  # noqa
+import os
 
+from .base import *  # noqa
 
 os.environ.setdefault("CACHE_HOST", "127.0.0.1:11211")
 os.environ.setdefault("BROKER_HOST", "127.0.0.1:5672")

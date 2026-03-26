@@ -1,6 +1,6 @@
-from django.http import HttpResponseNotAllowed
-from django.shortcuts import render, redirect
 from django.contrib import messages
+from django.http import HttpResponseNotAllowed
+from django.shortcuts import redirect, render
 
 from data_tools.forms import CSVUploadForm
 from data_tools.models import CSVImport
@@ -18,9 +18,7 @@ def upload_csv(request):
                 count_created, errors = ingest_csv(csv_import_object)
 
                 if errors:
-                    messages.error(
-                        request, f"Error(s) processing file: {', '.join(errors)}"
-                    )
+                    messages.error(request, f"Error(s) processing file: {', '.join(errors)}")
                     render(request, "data_tools/upload_csv.html", {"form": form})
                 else:
                     messages.success(

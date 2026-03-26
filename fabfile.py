@@ -5,11 +5,22 @@ import tempfile
 import time
 
 import yaml
-from fabric.api import env, execute, get, hide, local, put, require, run, settings, sudo, task
+from fabric.api import (
+    env,
+    execute,
+    get,
+    hide,
+    local,
+    put,
+    require,
+    run,
+    settings,
+    sudo,
+    task,
+)
 from fabric.contrib import files, project
 from fabric.exceptions import NetworkError
 from fabric.utils import abort
-
 
 DEFAULT_SALT_LOGLEVEL = "info"
 DEFAULT_SALT_LOGFMT = "%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s"

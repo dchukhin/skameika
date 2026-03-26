@@ -3,13 +3,13 @@ import os
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 
-from data_tools.models import CSVImport, TitleMapping, CategoryMapping
+from data_tools.models import CategoryMapping, CSVImport, TitleMapping
 from data_tools.utils import ingest_csv
 from occurrence.models import (
     Category,
-    Month,
-    ExpenseTransaction,
     EarningTransaction,
+    ExpenseTransaction,
+    Month,
 )
 
 
@@ -65,15 +65,9 @@ class IngestCSVTest(TestCase):
         # Check that the transactions were created
         self.assertEqual(ExpenseTransaction.objects.count(), 2)
         self.assertEqual(EarningTransaction.objects.count(), 1)
-        self.assertEqual(
-            ExpenseTransaction.objects.filter(title="Test Restaurant 1").count(), 1
-        )
-        self.assertEqual(
-            ExpenseTransaction.objects.filter(title="Test Restaurant 2").count(), 1
-        )
-        self.assertEqual(
-            EarningTransaction.objects.filter(title="Company A").count(), 1
-        )
+        self.assertEqual(ExpenseTransaction.objects.filter(title="Test Restaurant 1").count(), 1)
+        self.assertEqual(ExpenseTransaction.objects.filter(title="Test Restaurant 2").count(), 1)
+        self.assertEqual(EarningTransaction.objects.filter(title="Company A").count(), 1)
 
         # Check amounts are positive
         for transaction in ExpenseTransaction.objects.all():
@@ -84,9 +78,7 @@ class IngestCSVTest(TestCase):
 
         # All transactions were put into the appropriate category.
         self.assertEqual(
-            ExpenseTransaction.objects.filter(
-                category=self.category_food_and_drink
-            ).count(),
+            ExpenseTransaction.objects.filter(category=self.category_food_and_drink).count(),
             1,
         )
         self.assertEqual(
@@ -96,9 +88,7 @@ class IngestCSVTest(TestCase):
             1,
         )
         self.assertEqual(
-            EarningTransaction.objects.filter(
-                category=self.category_uncategorized_earning
-            ).count(),
+            EarningTransaction.objects.filter(category=self.category_uncategorized_earning).count(),
             1,
         )
         # Check that a Month was created.
@@ -111,9 +101,7 @@ class IngestCSVTest(TestCase):
     def test_invalid_date_format(self):
         # Set the (invalid) example_invalid_date.csv file as the self.csv_import's file.
         # Path to the invalid date format CSV file
-        invalid_csv_file_path = os.path.join(
-            os.path.dirname(__file__), "example_invalid_date.csv"
-        )
+        invalid_csv_file_path = os.path.join(os.path.dirname(__file__), "example_invalid_date.csv")
         with open(invalid_csv_file_path, "rb") as the_file:
             self.csv_import.file = SimpleUploadedFile(
                 "example.csv", the_file.read(), content_type="text/csv"
@@ -165,7 +153,9 @@ class IngestCSVTest(TestCase):
 
         # Check that the CSVImport object was updated with row counts from the second run
         self.csv_import.refresh_from_db()
-        self.assertEqual(self.csv_import.rows_created, 0)  # No new transactions created on second run
+        self.assertEqual(
+            self.csv_import.rows_created, 0
+        )  # No new transactions created on second run
         self.assertEqual(self.csv_import.rows_skipped, 3)  # All 3 rows were skipped as duplicates
         # Check that the duplicate transactions were not created.
         self.assertEqual(ExpenseTransaction.objects.count(), 2)
@@ -175,12 +165,10 @@ class IngestCSVTest(TestCase):
         """Test that title mappings are correctly applied during CSV ingestion."""
         # Create title mappings
         TitleMapping.objects.create(
-            source_title="Test Restaurant 1",
-            canonical_title="Restaurant One"
+            source_title="Test Restaurant 1", canonical_title="Restaurant One"
         )
         TitleMapping.objects.create(
-            source_title="Test Restaurant 2",
-            canonical_title="Restaurant Two"
+            source_title="Test Restaurant 2", canonical_title="Restaurant Two"
         )
 
         # Set the (valid) example.csv file as the self.csv_import's file.
@@ -208,25 +196,15 @@ class IngestCSVTest(TestCase):
         self.assertEqual(EarningTransaction.objects.count(), 1)
 
         # Verify the mapped titles are used
-        self.assertTrue(
-            ExpenseTransaction.objects.filter(title="Restaurant One").exists()
-        )
-        self.assertTrue(
-            ExpenseTransaction.objects.filter(title="Restaurant Two").exists()
-        )
+        self.assertTrue(ExpenseTransaction.objects.filter(title="Restaurant One").exists())
+        self.assertTrue(ExpenseTransaction.objects.filter(title="Restaurant Two").exists())
 
         # Verify original titles are NOT used
-        self.assertFalse(
-            ExpenseTransaction.objects.filter(title="Test Restaurant 1").exists()
-        )
-        self.assertFalse(
-            ExpenseTransaction.objects.filter(title="Test Restaurant 2").exists()
-        )
+        self.assertFalse(ExpenseTransaction.objects.filter(title="Test Restaurant 1").exists())
+        self.assertFalse(ExpenseTransaction.objects.filter(title="Test Restaurant 2").exists())
 
         # The earning transaction (Company A) should remain unchanged since no mapping exists
-        self.assertTrue(
-            EarningTransaction.objects.filter(title="Company A").exists()
-        )
+        self.assertTrue(EarningTransaction.objects.filter(title="Company A").exists())
 
     def test_category_mapping(self):
         """CategoryMapping overrides the CSV Category column for matching descriptions."""

@@ -6,10 +6,10 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils.text import slugify
 
-from .. import models
-from . import factories
 from data_tools.models import CSVImport
 
+from .. import models
+from . import factories
 
 # class TestTransactionsView(TestCase):
 #     url_name = 'transactions'
@@ -54,12 +54,8 @@ class TestTotalsView(TestCase):
 
         with self.subTest("Transactions in 1 Category"):
             category1 = factories.CategoryFactory()
-            t1 = factories.ExpenseTransactionFactory(
-                date=date.today(), category=category1
-            )
-            t2 = factories.ExpenseTransactionFactory(
-                date=date.today(), category=category1
-            )
+            t1 = factories.ExpenseTransactionFactory(date=date.today(), category=category1)
+            t2 = factories.ExpenseTransactionFactory(date=date.today(), category=category1)
             exp_total_category1 = t1.amount + t2.amount
             # A month Transactions in 1 Category has 1 category row
             response = self.client.get(self.url_current_month)
@@ -71,9 +67,7 @@ class TestTotalsView(TestCase):
 
         with self.subTest("Transactions in multiple Categories"):
             category2 = factories.CategoryFactory()
-            t3 = factories.ExpenseTransactionFactory(
-                date=date.today(), category=category2
-            )
+            t3 = factories.ExpenseTransactionFactory(date=date.today(), category=category2)
             exp_total_category1 = t1.amount + t2.amount
             exp_total_category2 = t3.amount
 
@@ -114,9 +108,7 @@ class TestTotalsView(TestCase):
     def test_statistics(self):
         """GETting the endpoint returns statistics for the month."""
         # A MonthlyStatistic for the current Month
-        monthly_statistic_current1 = factories.MonthlyStatisticFactory(
-            month=self.current_month
-        )
+        monthly_statistic_current1 = factories.MonthlyStatisticFactory(month=self.current_month)
         # A MonthlyStatistic for the wrong Month
         factories.MonthlyStatisticFactory()
 
@@ -167,9 +159,7 @@ class TestRunningTotalCategoriesTestCase(TestCase):
         running_total_cat2 = factories.CategoryFactory(
             total_type=models.Category.TOTAL_TYPE_RUNNING
         )
-        regular_total_cat = factories.CategoryFactory(
-            total_type=models.Category.TOTAL_TYPE_REGULAR
-        )
+        regular_total_cat = factories.CategoryFactory(total_type=models.Category.TOTAL_TYPE_REGULAR)
 
         response = self.client.get(self.url)
 
@@ -229,17 +219,13 @@ class TestEditTransactionTestCase(TestCase):
             response = self.client.get(self.url_transaction_expense)
             self.assertEqual(response.status_code, 200)
             self.assertTemplateUsed(response, self.template_name)
-            self.assertEqual(
-                response.context["form"].Meta.model, models.ExpenseTransaction
-            )
+            self.assertEqual(response.context["form"].Meta.model, models.ExpenseTransaction)
 
         with self.subTest("EarningTransaction"):
             response = self.client.get(self.url_transaction_earning)
             self.assertEqual(response.status_code, 200)
             self.assertTemplateUsed(response, self.template_name)
-            self.assertEqual(
-                response.context["form"].Meta.model, models.EarningTransaction
-            )
+            self.assertEqual(response.context["form"].Meta.model, models.EarningTransaction)
 
     def test_post_valid(self):
         """Make a valid POST to update a transaction."""
@@ -281,9 +267,7 @@ class TestEditTransactionTestCase(TestCase):
                 transaction.refresh_from_db()
                 self.assertEqual(transaction.title, new_title)
                 self.assertEqual(transaction.amount, new_amount)
-                self.assertEqual(
-                    transaction.date, datetime.strptime(new_date, "%Y-%m-%d").date()
-                )
+                self.assertEqual(transaction.date, datetime.strptime(new_date, "%Y-%m-%d").date())
 
     def test_post_valid_with_next(self):
         """A valid POST with a ?next= param redirects to that URL."""
@@ -294,7 +278,10 @@ class TestEditTransactionTestCase(TestCase):
         ):
             with self.subTest(type_cat=type_cat):
                 url = (
-                    reverse(self.url_name, kwargs={"type_cat": type_cat, "id": transaction.pk})
+                    reverse(
+                        self.url_name,
+                        kwargs={"type_cat": type_cat, "id": transaction.pk},
+                    )
                     + f"?next={next_url}"
                 )
                 data = {
@@ -315,7 +302,10 @@ class TestEditTransactionTestCase(TestCase):
         ):
             with self.subTest(type_cat=type_cat):
                 url = (
-                    reverse(self.url_name, kwargs={"type_cat": type_cat, "id": transaction.pk})
+                    reverse(
+                        self.url_name,
+                        kwargs={"type_cat": type_cat, "id": transaction.pk},
+                    )
                     + "?next=http://evil.com/"
                 )
                 data = {
@@ -326,9 +316,7 @@ class TestEditTransactionTestCase(TestCase):
                     "description": transaction.description,
                 }
                 response = self.client.post(url, data=data)
-                expected = "{}?month={}".format(
-                    reverse("transactions"), slugify("January, 2022")
-                )
+                expected = "{}?month={}".format(reverse("transactions"), slugify("January, 2022"))
                 self.assertRedirects(response, expected, fetch_redirect_response=False)
 
     def test_post_invalid(self):
@@ -398,15 +386,11 @@ class TestEditTransactionTestCase(TestCase):
                 }
 
                 data["category"] = self.transaction_expense.category.pk
-                response_expense = self.client.post(
-                    invalid_expense_url, data=data, follow=True
-                )
+                response_expense = self.client.post(invalid_expense_url, data=data, follow=True)
                 self.assertEqual(response_expense.status_code, 404)
 
                 data["category"] = self.transaction_earning.category.pk
-                response_earning = self.client.post(
-                    invalid_earning_url, data=data, follow=True
-                )
+                response_earning = self.client.post(invalid_earning_url, data=data, follow=True)
                 self.assertEqual(response_earning.status_code, 404)
 
     def test_nonexistent_transaction(self):
@@ -564,24 +548,25 @@ class TestCopyTransactionsTestCase(TestCase):
             response = self.client.get(url)
             self.assertEqual(response.status_code, 200)
             self.assertTemplateUsed(response, self.template_name)
-            expected_error = "You must choose a valid transaction_type (either 'expense' or 'income')."
+            expected_error = (
+                "You must choose a valid transaction_type (either 'expense' or 'income')."
+            )
             self.assertEqual(response.context["errors"], [expected_error])
 
         with self.subTest("invalid transaction_type"):
             url = reverse(self.url_name) + (
-                f"?transaction_type=something"
-                f"&selected_transactions={self.transaction_expense1.id}"
+                f"?transaction_type=something&selected_transactions={self.transaction_expense1.id}"
             )
             response = self.client.get(url)
             self.assertEqual(response.status_code, 200)
             self.assertTemplateUsed(response, self.template_name)
-            expected_error = "You must choose a valid transaction_type (either 'expense' or 'income')."
+            expected_error = (
+                "You must choose a valid transaction_type (either 'expense' or 'income')."
+            )
             self.assertEqual(response.context["errors"], [expected_error])
 
         with self.subTest("no selected_transactions"):
-            url = reverse(self.url_name) + (
-                f"?transaction_type={models.Category.TYPE_EXPENSE}"
-            )
+            url = reverse(self.url_name) + (f"?transaction_type={models.Category.TYPE_EXPENSE}")
             response = self.client.get(url)
             self.assertEqual(response.status_code, 200)
             self.assertTemplateUsed(response, self.template_name)
@@ -590,8 +575,7 @@ class TestCopyTransactionsTestCase(TestCase):
 
         with self.subTest("invalid selected_transactions"):
             url = reverse(self.url_name) + (
-                f"?transaction_type={models.Category.TYPE_EXPENSE}"
-                f"&selected_transactions=a"
+                f"?transaction_type={models.Category.TYPE_EXPENSE}&selected_transactions=a"
             )
             response = self.client.get(url)
             self.assertEqual(response.status_code, 200)
@@ -635,12 +619,8 @@ class TestCopyTransactionsTestCase(TestCase):
         # The date string that will be used in this test.
         new_date_str = "2020-01-01"
         # Currently, no transactions exist for the new_date_str.
-        self.assertEqual(
-            models.ExpenseTransaction.objects.filter(date=new_date_str).count(), 0
-        )
-        self.assertEqual(
-            models.EarningTransaction.objects.filter(date=new_date_str).count(), 0
-        )
+        self.assertEqual(models.ExpenseTransaction.objects.filter(date=new_date_str).count(), 0)
+        self.assertEqual(models.EarningTransaction.objects.filter(date=new_date_str).count(), 0)
 
         data = {"date": new_date_str}
 
@@ -691,12 +671,8 @@ class TestCopyTransactionsTestCase(TestCase):
             new_transaction2 = models.ExpenseTransaction.objects.get(
                 date=new_date_str, title=self.transaction_expense2.title
             )
-            self.assert_transactions_have_same_data(
-                self.transaction_expense1, new_transaction1
-            )
-            self.assert_transactions_have_same_data(
-                self.transaction_expense2, new_transaction2
-            )
+            self.assert_transactions_have_same_data(self.transaction_expense1, new_transaction1)
+            self.assert_transactions_have_same_data(self.transaction_expense2, new_transaction2)
 
         with self.subTest("EarningTransactions"):
             data["transaction_type"] = models.Category.TYPE_EARNING
@@ -708,9 +684,7 @@ class TestCopyTransactionsTestCase(TestCase):
             expected_redirect_url = reverse("transactions")
             self.assertRedirects(response, expected_redirect_url)
             # One new transaction has been created.
-            self.assertEqual(
-                models.EarningTransaction.objects.filter(date=new_date_str).count(), 1
-            )
+            self.assertEqual(models.EarningTransaction.objects.filter(date=new_date_str).count(), 1)
             # There are now 2 transactions with the title that self.transaction_earning1 has.
             self.assertEqual(
                 models.EarningTransaction.objects.filter(
@@ -737,21 +711,15 @@ class TestCopyTransactionsTestCase(TestCase):
             new_transaction1 = models.EarningTransaction.objects.get(
                 date=new_date_str, title=self.transaction_earning1.title
             )
-            self.assert_transactions_have_same_data(
-                self.transaction_earning1, new_transaction1
-            )
+            self.assert_transactions_have_same_data(self.transaction_earning1, new_transaction1)
 
     def test_post_invalid(self):
         """Make an invalid POST to copy transactions."""
         # The date string that will be used in this test.
         new_date_str = "2020-01-01"
         # Currently, no transactions exist for the new_date_str.
-        self.assertEqual(
-            models.ExpenseTransaction.objects.filter(date=new_date_str).count(), 0
-        )
-        self.assertEqual(
-            models.EarningTransaction.objects.filter(date=new_date_str).count(), 0
-        )
+        self.assertEqual(models.ExpenseTransaction.objects.filter(date=new_date_str).count(), 0)
+        self.assertEqual(models.EarningTransaction.objects.filter(date=new_date_str).count(), 0)
 
         data = {"date": new_date_str}
 
@@ -765,15 +733,13 @@ class TestCopyTransactionsTestCase(TestCase):
 
             self.assertEqual(response.status_code, 200)
             self.assertTemplateUsed(response, self.template_name)
-            expected_error = "You must choose a valid transaction_type (either 'expense' or 'income')."
+            expected_error = (
+                "You must choose a valid transaction_type (either 'expense' or 'income')."
+            )
             self.assertEqual(response.context["errors"], [expected_error])
             # No transactions were created.
-            self.assertEqual(
-                models.ExpenseTransaction.objects.count(), count_expense_transactions
-            )
-            self.assertEqual(
-                models.EarningTransaction.objects.count(), count_earning_transactions
-            )
+            self.assertEqual(models.ExpenseTransaction.objects.count(), count_expense_transactions)
+            self.assertEqual(models.EarningTransaction.objects.count(), count_earning_transactions)
 
         with self.subTest("invalid transaction_type"):
             data["transaction_type"] = "not a valid transaction_type"
@@ -782,15 +748,13 @@ class TestCopyTransactionsTestCase(TestCase):
             response = self.client.post(reverse(self.url_name), data)
             self.assertEqual(response.status_code, 200)
             self.assertTemplateUsed(response, self.template_name)
-            expected_error = "You must choose a valid transaction_type (either 'expense' or 'income')."
+            expected_error = (
+                "You must choose a valid transaction_type (either 'expense' or 'income')."
+            )
             self.assertEqual(response.context["errors"], [expected_error])
             # No transactions were created.
-            self.assertEqual(
-                models.ExpenseTransaction.objects.count(), count_expense_transactions
-            )
-            self.assertEqual(
-                models.EarningTransaction.objects.count(), count_expense_transactions
-            )
+            self.assertEqual(models.ExpenseTransaction.objects.count(), count_expense_transactions)
+            self.assertEqual(models.EarningTransaction.objects.count(), count_expense_transactions)
 
         with self.subTest("no selected_transactions"):
             data["transaction_type"] = models.Category.TYPE_EARNING
@@ -802,12 +766,8 @@ class TestCopyTransactionsTestCase(TestCase):
             expected_redirect_url = reverse("transactions")
             self.assertRedirects(response, expected_redirect_url)
             # No transactions were created.
-            self.assertEqual(
-                models.ExpenseTransaction.objects.count(), count_expense_transactions
-            )
-            self.assertEqual(
-                models.EarningTransaction.objects.count(), count_expense_transactions
-            )
+            self.assertEqual(models.ExpenseTransaction.objects.count(), count_expense_transactions)
+            self.assertEqual(models.EarningTransaction.objects.count(), count_expense_transactions)
 
         with self.subTest("invalid selected_transactions"):
             data["transaction_type"] = models.Category.TYPE_EARNING
@@ -822,12 +782,8 @@ class TestCopyTransactionsTestCase(TestCase):
                 ["The selected transaction ids must be integers."],
             )
             # No transactions were created.
-            self.assertEqual(
-                models.ExpenseTransaction.objects.count(), count_expense_transactions
-            )
-            self.assertEqual(
-                models.EarningTransaction.objects.count(), count_expense_transactions
-            )
+            self.assertEqual(models.ExpenseTransaction.objects.count(), count_expense_transactions)
+            self.assertEqual(models.EarningTransaction.objects.count(), count_expense_transactions)
 
         with self.subTest("non-existent selected_transactions"):
             data["transaction_type"] = models.Category.TYPE_EARNING
@@ -842,12 +798,8 @@ class TestCopyTransactionsTestCase(TestCase):
                 ["One or more of the selected transactions does not exist."],
             )
             # No transactions were created.
-            self.assertEqual(
-                models.ExpenseTransaction.objects.count(), count_expense_transactions
-            )
-            self.assertEqual(
-                models.EarningTransaction.objects.count(), count_expense_transactions
-            )
+            self.assertEqual(models.ExpenseTransaction.objects.count(), count_expense_transactions)
+            self.assertEqual(models.EarningTransaction.objects.count(), count_expense_transactions)
 
         with self.subTest("an existent and a non-existent selected_transactions"):
             data["transaction_type"] = models.Category.TYPE_EARNING
@@ -865,12 +817,8 @@ class TestCopyTransactionsTestCase(TestCase):
                 ["One or more of the selected transactions does not exist."],
             )
             # No transactions were created.
-            self.assertEqual(
-                models.ExpenseTransaction.objects.count(), count_expense_transactions
-            )
-            self.assertEqual(
-                models.EarningTransaction.objects.count(), count_expense_transactions
-            )
+            self.assertEqual(models.ExpenseTransaction.objects.count(), count_expense_transactions)
+            self.assertEqual(models.EarningTransaction.objects.count(), count_expense_transactions)
 
         with self.subTest("invalid date"):
             data["transaction_type"] = models.Category.TYPE_EARNING
@@ -881,7 +829,9 @@ class TestCopyTransactionsTestCase(TestCase):
 
             self.assertEqual(response.status_code, 200)
             self.assertTemplateUsed(response, self.template_name)
-            expected_error = f"You must choose a date in the appropriate format. '{data['date']}' is not valid."
+            expected_error = (
+                f"You must choose a date in the appropriate format. '{data['date']}' is not valid."
+            )
             self.assertEqual(response.context["errors"], [expected_error])
 
 
@@ -1033,8 +983,9 @@ class TestCSVImportListView(TestCase):
 
     def test_csv_imports_ordered_by_created_at_desc(self):
         """CSV imports should be ordered by created_at in descending order."""
-        from django.utils import timezone
         from datetime import timedelta
+
+        from django.utils import timezone
 
         now = timezone.now()
 
@@ -1108,9 +1059,7 @@ class TestStatisticsChartView(TestCase):
 
     def test_get_with_all_params(self):
         """GET with all params returns 200 and chart_data in context."""
-        ms = factories.MonthlyStatisticFactory(
-            statistic=self.statistic, month=self.month_feb
-        )
+        ms = factories.MonthlyStatisticFactory(statistic=self.statistic, month=self.month_feb)
         url = "{}?statistic={}&start_month={}&end_month={}".format(
             self.url,
             self.statistic.slug,
@@ -1126,9 +1075,7 @@ class TestStatisticsChartView(TestCase):
 
     def test_get_data_in_range(self):
         """Only MonthlyStatistics within the date range appear in chart_data."""
-        ms_in = factories.MonthlyStatisticFactory(
-            statistic=self.statistic, month=self.month_feb
-        )
+        ms_in = factories.MonthlyStatisticFactory(statistic=self.statistic, month=self.month_feb)
         url = "{}?statistic={}&start_month={}&end_month={}".format(
             self.url,
             self.statistic.slug,
@@ -1142,9 +1089,7 @@ class TestStatisticsChartView(TestCase):
     def test_get_data_outside_range(self):
         """MonthlyStatistics outside the date range are absent from chart_data."""
         month_outside = factories.MonthFactory(year=2022, month=12, name="December, 2022")
-        factories.MonthlyStatisticFactory(
-            statistic=self.statistic, month=month_outside
-        )
+        factories.MonthlyStatisticFactory(statistic=self.statistic, month=month_outside)
         url = "{}?statistic={}&start_month={}&end_month={}".format(
             self.url,
             self.statistic.slug,
@@ -1386,9 +1331,7 @@ class TestBudgetView(TestCase):
         """The budget page shows month navigation links."""
         other_month = factories.MonthFactory(month=6, year=2020, name="June, 2020")
         response = self.client.get(self.url_current_month)
-        self.assertContains(
-            response, '?month={}'.format(other_month.slug)
-        )
+        self.assertContains(response, "?month={}".format(other_month.slug))
 
 
 class TestEditBudgetRowView(TestCase):
@@ -1425,9 +1368,7 @@ class TestEditBudgetRowView(TestCase):
 
         response = self.client.post(self.url, data=data)
 
-        expected_redirect = "{}?month={}".format(
-            reverse("budget"), self.month.slug
-        )
+        expected_redirect = "{}?month={}".format(reverse("budget"), self.month.slug)
         self.assertRedirects(response, expected_redirect)
         self.row.refresh_from_db()
         self.assertEqual(self.row.amount, Decimal("200.00"))
@@ -1510,9 +1451,7 @@ class TestDeleteBudgetRowView(TestCase):
         """POST deletes the row and redirects to budget page."""
         response = self.client.post(self.url)
 
-        expected_redirect = "{}?month={}".format(
-            reverse("budget"), self.month.slug
-        )
+        expected_redirect = "{}?month={}".format(reverse("budget"), self.month.slug)
         self.assertRedirects(response, expected_redirect)
         self.assertFalse(
             models.ExpectedMonthlyCategoryTotal.objects.filter(pk=self.row.pk).exists()
@@ -1549,12 +1488,8 @@ class TestCopyBudgetView(TestCase):
 
     def setUp(self):
         super().setUp()
-        self.source_month = factories.MonthFactory(
-            month=1, year=2020, name="January, 2020"
-        )
-        self.target_month = factories.MonthFactory(
-            month=2, year=2020, name="February, 2020"
-        )
+        self.source_month = factories.MonthFactory(month=1, year=2020, name="January, 2020")
+        self.target_month = factories.MonthFactory(month=2, year=2020, name="February, 2020")
         self.url = reverse(self.url_name)
 
     def test_copy_budget_success(self):
@@ -1568,10 +1503,8 @@ class TestCopyBudgetView(TestCase):
             category=cat2, month=self.source_month, amount=Decimal("200.00")
         )
         self.assertEqual(
-            models.ExpectedMonthlyCategoryTotal.objects.filter(
-                month=self.target_month
-            ).count(),
-            0
+            models.ExpectedMonthlyCategoryTotal.objects.filter(month=self.target_month).count(),
+            0,
         )
 
         data = {
@@ -1580,21 +1513,13 @@ class TestCopyBudgetView(TestCase):
         }
         response = self.client.post(self.url, data=data)
 
-        expected_redirect = "{}?month={}".format(
-            reverse("budget"), self.target_month.slug
-        )
+        expected_redirect = "{}?month={}".format(reverse("budget"), self.target_month.slug)
         self.assertRedirects(response, expected_redirect)
 
-        target_rows = models.ExpectedMonthlyCategoryTotal.objects.filter(
-            month=self.target_month
-        )
+        target_rows = models.ExpectedMonthlyCategoryTotal.objects.filter(month=self.target_month)
         self.assertEqual(target_rows.count(), 2)
-        self.assertEqual(
-            target_rows.get(category=cat1).amount, Decimal("100.00")
-        )
-        self.assertEqual(
-            target_rows.get(category=cat2).amount, Decimal("200.00")
-        )
+        self.assertEqual(target_rows.get(category=cat1).amount, Decimal("100.00"))
+        self.assertEqual(target_rows.get(category=cat2).amount, Decimal("200.00"))
 
     def test_copy_budget_with_conflicts(self):
         """No rows are copied when conflicts exist, and all conflicts are reported."""
@@ -1627,9 +1552,7 @@ class TestCopyBudgetView(TestCase):
 
         # No new rows were created (target still has just 1)
         self.assertEqual(
-            models.ExpectedMonthlyCategoryTotal.objects.filter(
-                month=self.target_month
-            ).count(),
+            models.ExpectedMonthlyCategoryTotal.objects.filter(month=self.target_month).count(),
             1,
         )
 
@@ -1637,19 +1560,11 @@ class TestCopyBudgetView(TestCase):
         """When all source rows conflict, no rows are copied and all errors shown."""
         cat1 = factories.ExpenseCategoryFactory()
         cat2 = factories.ExpenseCategoryFactory()
-        factories.ExpectedMonthlyCategoryTotalFactory(
-            category=cat1, month=self.source_month
-        )
-        factories.ExpectedMonthlyCategoryTotalFactory(
-            category=cat2, month=self.source_month
-        )
+        factories.ExpectedMonthlyCategoryTotalFactory(category=cat1, month=self.source_month)
+        factories.ExpectedMonthlyCategoryTotalFactory(category=cat2, month=self.source_month)
         # Both already exist in target
-        factories.ExpectedMonthlyCategoryTotalFactory(
-            category=cat1, month=self.target_month
-        )
-        factories.ExpectedMonthlyCategoryTotalFactory(
-            category=cat2, month=self.target_month
-        )
+        factories.ExpectedMonthlyCategoryTotalFactory(category=cat1, month=self.target_month)
+        factories.ExpectedMonthlyCategoryTotalFactory(category=cat2, month=self.target_month)
 
         data = {
             "source_month": self.source_month.slug,
@@ -1863,8 +1778,12 @@ class TestTotalsViewBudgetColumn(TestCase):
         """expense_budget_total sums all expense category budgets."""
         cat1 = factories.ExpenseCategoryFactory()
         cat2 = factories.ExpenseCategoryFactory()
-        factories.ExpenseTransactionFactory(date=date.today(), category=cat1, amount=Decimal("30.00"))
-        factories.ExpenseTransactionFactory(date=date.today(), category=cat2, amount=Decimal("20.00"))
+        factories.ExpenseTransactionFactory(
+            date=date.today(), category=cat1, amount=Decimal("30.00")
+        )
+        factories.ExpenseTransactionFactory(
+            date=date.today(), category=cat2, amount=Decimal("20.00")
+        )
         factories.ExpectedMonthlyCategoryTotalFactory(
             category=cat1, month=self.current_month, amount=Decimal("100.00")
         )
@@ -1880,8 +1799,12 @@ class TestTotalsViewBudgetColumn(TestCase):
         """earning_budget_total sums all earning category budgets."""
         cat1 = factories.IncomeCategoryFactory()
         cat2 = factories.IncomeCategoryFactory()
-        factories.EarningTransactionFactory(date=date.today(), category=cat1, amount=Decimal("50.00"))
-        factories.EarningTransactionFactory(date=date.today(), category=cat2, amount=Decimal("75.00"))
+        factories.EarningTransactionFactory(
+            date=date.today(), category=cat1, amount=Decimal("50.00")
+        )
+        factories.EarningTransactionFactory(
+            date=date.today(), category=cat2, amount=Decimal("75.00")
+        )
         factories.ExpectedMonthlyCategoryTotalFactory(
             category=cat1, month=self.current_month, amount=Decimal("500.00")
         )
@@ -1908,7 +1831,9 @@ class TestTotalsViewBudgetColumn(TestCase):
     def test_expense_budget_total_shown_in_total_row(self):
         """The expense total row shows the summed budget total."""
         category = factories.ExpenseCategoryFactory()
-        factories.ExpenseTransactionFactory(date=date.today(), category=category, amount=Decimal("50.00"))
+        factories.ExpenseTransactionFactory(
+            date=date.today(), category=category, amount=Decimal("50.00")
+        )
         factories.ExpectedMonthlyCategoryTotalFactory(
             category=category, month=self.current_month, amount=Decimal("200.00")
         )
@@ -1920,7 +1845,9 @@ class TestTotalsViewBudgetColumn(TestCase):
     def test_earning_budget_total_shown_in_total_row(self):
         """The earning total row shows the summed budget total."""
         category = factories.IncomeCategoryFactory()
-        factories.EarningTransactionFactory(date=date.today(), category=category, amount=Decimal("50.00"))
+        factories.EarningTransactionFactory(
+            date=date.today(), category=category, amount=Decimal("50.00")
+        )
         factories.ExpectedMonthlyCategoryTotalFactory(
             category=category, month=self.current_month, amount=Decimal("300.00")
         )
@@ -1932,7 +1859,9 @@ class TestTotalsViewBudgetColumn(TestCase):
     def test_expense_total_row_shows_dash_when_no_budget(self):
         """The expense total row shows '-' for budget when no budgets are set."""
         category = factories.ExpenseCategoryFactory()
-        factories.ExpenseTransactionFactory(date=date.today(), category=category, amount=Decimal("50.00"))
+        factories.ExpenseTransactionFactory(
+            date=date.today(), category=category, amount=Decimal("50.00")
+        )
 
         response = self.client.get(self.url_current_month)
 
@@ -1942,8 +1871,12 @@ class TestTotalsViewBudgetColumn(TestCase):
         """budget_total is earning_budget_total minus expense_budget_total."""
         expense_cat = factories.ExpenseCategoryFactory()
         earning_cat = factories.IncomeCategoryFactory()
-        factories.ExpenseTransactionFactory(date=date.today(), category=expense_cat, amount=Decimal("50.00"))
-        factories.EarningTransactionFactory(date=date.today(), category=earning_cat, amount=Decimal("80.00"))
+        factories.ExpenseTransactionFactory(
+            date=date.today(), category=expense_cat, amount=Decimal("50.00")
+        )
+        factories.EarningTransactionFactory(
+            date=date.today(), category=earning_cat, amount=Decimal("80.00")
+        )
         factories.ExpectedMonthlyCategoryTotalFactory(
             category=expense_cat, month=self.current_month, amount=Decimal("200.00")
         )
@@ -1958,7 +1891,9 @@ class TestTotalsViewBudgetColumn(TestCase):
     def test_grand_budget_total_none_when_missing_budget(self):
         """budget_total is None when either earnings or expenses have no budget."""
         expense_cat = factories.ExpenseCategoryFactory()
-        factories.ExpenseTransactionFactory(date=date.today(), category=expense_cat, amount=Decimal("50.00"))
+        factories.ExpenseTransactionFactory(
+            date=date.today(), category=expense_cat, amount=Decimal("50.00")
+        )
         factories.ExpectedMonthlyCategoryTotalFactory(
             category=expense_cat, month=self.current_month, amount=Decimal("200.00")
         )

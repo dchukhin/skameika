@@ -99,7 +99,7 @@ class TransactionBase(models.Model):
         on_delete=models.CASCADE,
         null=True,
         blank=True,
-        help_text="The CSV import this transaction was created from."
+        help_text="The CSV import this transaction was created from.",
     )
 
     def __str__(self):

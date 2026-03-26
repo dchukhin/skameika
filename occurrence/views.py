@@ -10,6 +10,7 @@ from django.utils.text import slugify
 from django.views.decorators.http import require_http_methods
 
 from data_tools.models import CSVImport
+
 from . import forms, models, utils
 
 
@@ -17,9 +18,7 @@ def transactions(request, *args, **kwargs):
     """Show all current transactions."""
     # Get the current_month, either from the request kwargs, or use the today's month
     if request.GET.get("month"):
-        current_month = get_object_or_404(
-            models.Month.objects.all(), slug=request.GET.get("month")
-        )
+        current_month = get_object_or_404(models.Month.objects.all(), slug=request.GET.get("month"))
     else:
         current_month = models.Month.objects.get_or_create(
             year=date.today().year,
@@ -114,12 +113,22 @@ def totals(request, *args, **kwargs):
     # Get the MonthlyStatistic for this Month
     monthly_statistics = models.MonthlyStatistic.objects.filter(month=month)
 
-    expense_budget_total = sum(
-        cat["budgeted"] for cat in expense_categories.values() if cat.get("budgeted") is not None
-    ) or None
-    earning_budget_total = sum(
-        cat["budgeted"] for cat in earning_categories.values() if cat.get("budgeted") is not None
-    ) or None
+    expense_budget_total = (
+        sum(
+            cat["budgeted"]
+            for cat in expense_categories.values()
+            if cat.get("budgeted") is not None
+        )
+        or None
+    )
+    earning_budget_total = (
+        sum(
+            cat["budgeted"]
+            for cat in earning_categories.values()
+            if cat.get("budgeted") is not None
+        )
+        or None
+    )
 
     context = {
         "expense_categories": expense_categories,
@@ -153,16 +162,12 @@ def running_total_categories(request):
     categories = models.Category.objects.filter(
         total_type=models.Category.TOTAL_TYPE_RUNNING
     ).annotate(
-        total=Sum(
-            F("expensetransaction__amount") * Value("-1"), output_field=DecimalField()
-        ),
+        total=Sum(F("expensetransaction__amount") * Value("-1"), output_field=DecimalField()),
     )
     # For each Category, attach a queryset of ExpenseTransactions that have a
     # running_total_amount fiels
     for category in categories:
-        category.expense_transactions = utils.get_expensetransactions_running_totals(
-            category
-        )
+        category.expense_transactions = utils.get_expensetransactions_running_totals(category)
 
     context = {"categories": categories}
     return render(request, "occurrence/running_totals.html", context)
@@ -193,9 +198,7 @@ def edit_transaction(request, type_cat, id):
                 return redirect(next_url)
             # Redirect the user to the transactions view for the month that this
             # transaction is in
-            return redirect(
-                "{}?month={}".format(reverse("transactions"), transaction.month.slug)
-            )
+            return redirect("{}?month={}".format(reverse("transactions"), transaction.month.slug))
     else:
         if type_cat == models.Category.TYPE_EXPENSE:
             form = forms.ExpenseTransactionForm(instance=transaction)
@@ -246,9 +249,7 @@ def csv_import_transactions(request, csv_import_id):
 def budget(request):
     """Show and manage budget rows for a month."""
     if request.GET.get("month"):
-        current_month = get_object_or_404(
-            models.Month.objects.all(), slug=request.GET.get("month")
-        )
+        current_month = get_object_or_404(models.Month.objects.all(), slug=request.GET.get("month"))
     else:
         current_month = models.Month.objects.get_or_create(
             year=date.today().year,
@@ -281,9 +282,7 @@ def budget(request):
                 )
             else:
                 budget_row.save()
-                return redirect(
-                    "{}?month={}".format(reverse("budget"), current_month.slug)
-                )
+                return redirect("{}?month={}".format(reverse("budget"), current_month.slug))
 
         # Put the form (with errors) back in the right slot
         if form:
@@ -294,9 +293,9 @@ def budget(request):
 
     # Fetch all rows once and split in Python to avoid extra DB queries
     all_rows = list(
-        models.ExpectedMonthlyCategoryTotal.objects.filter(
-            month=current_month
-        ).select_related("category")
+        models.ExpectedMonthlyCategoryTotal.objects.filter(month=current_month).select_related(
+            "category"
+        )
     )
     earning_rows = [r for r in all_rows if r.category.type_cat == models.Category.TYPE_EARNING]
     expense_rows = [r for r in all_rows if r.category.type_cat == models.Category.TYPE_EXPENSE]
@@ -341,9 +340,7 @@ def edit_budget_row(request, id):
                 )
             else:
                 form.save()
-                return redirect(
-                    "{}?month={}".format(reverse("budget"), row.month.slug)
-                )
+                return redirect("{}?month={}".format(reverse("budget"), row.month.slug))
     else:
         form = forms.ExpectedMonthlyCategoryTotalForm(instance=row)
 
@@ -363,12 +360,8 @@ def delete_budget_row(request, id):
 @require_http_methods(["POST"])
 def copy_budget(request):
     """Copy all budget rows from a source month to the target month."""
-    source_month = get_object_or_404(
-        models.Month, slug=request.POST.get("source_month")
-    )
-    target_month = get_object_or_404(
-        models.Month, slug=request.POST.get("target_month")
-    )
+    source_month = get_object_or_404(models.Month, slug=request.POST.get("source_month"))
+    target_month = get_object_or_404(models.Month, slug=request.POST.get("target_month"))
 
     source_rows = models.ExpectedMonthlyCategoryTotal.objects.filter(
         month=source_month
@@ -380,9 +373,9 @@ def copy_budget(request):
 
     # Check for conflicts
     existing_categories = set(
-        models.ExpectedMonthlyCategoryTotal.objects.filter(
-            month=target_month
-        ).values_list("category_id", flat=True)
+        models.ExpectedMonthlyCategoryTotal.objects.filter(month=target_month).values_list(
+            "category_id", flat=True
+        )
     )
     conflicts = [row for row in source_rows if row.category_id in existing_categories]
 
@@ -433,21 +426,18 @@ def statistics_chart_view(request):
         end_month = get_object_or_404(models.Month, slug=end_month_slug)
 
         months_in_range = models.Month.objects.filter(
-            Q(year__gt=start_month.year) |
-            Q(year=start_month.year, month__gte=start_month.month)
-        ).filter(
-            Q(year__lt=end_month.year) |
-            Q(year=end_month.year, month__lte=end_month.month)
+            Q(year__gt=start_month.year) | Q(year=start_month.year, month__gte=start_month.month)
+        ).filter(Q(year__lt=end_month.year) | Q(year=end_month.year, month__lte=end_month.month))
+        monthly_stats = (
+            models.MonthlyStatistic.objects.filter(
+                statistic=statistic,
+                month__in=months_in_range,
+            )
+            .select_related("month")
+            .order_by("month__year", "month__month")
         )
-        monthly_stats = models.MonthlyStatistic.objects.filter(
-            statistic=statistic,
-            month__in=months_in_range,
-        ).select_related("month").order_by("month__year", "month__month")
 
-        chart_data = [
-            {"month": str(ms.month), "amount": float(ms.amount)}
-            for ms in monthly_stats
-        ]
+        chart_data = [{"month": str(ms.month), "amount": float(ms.amount)} for ms in monthly_stats]
 
     context = {
         "all_statistics": all_statistics,
@@ -478,13 +468,9 @@ def copy_transactions(request):
         return render(request, "occurrence/copy_transactions.html", context)
 
     if transaction_type == models.Category.TYPE_EXPENSE:
-        transactions = models.ExpenseTransaction.objects.filter(
-            id__in=selected_transaction_ids
-        )
+        transactions = models.ExpenseTransaction.objects.filter(id__in=selected_transaction_ids)
     elif transaction_type == models.Category.TYPE_EARNING:
-        transactions = models.EarningTransaction.objects.filter(
-            id__in=selected_transaction_ids
-        )
+        transactions = models.EarningTransaction.objects.filter(id__in=selected_transaction_ids)
     else:
         error = (
             f"You must choose a valid transaction_type (either '{models.Category.TYPE_EXPENSE}' "
@@ -537,11 +523,7 @@ def copy_transactions(request):
                     description=transaction.description,
                 )
             )
-        num_transactions_created = TransactionModel.objects.bulk_create(
-            new_transactions
-        )
+        num_transactions_created = TransactionModel.objects.bulk_create(new_transactions)
 
-        messages.success(
-            request, f"{len(num_transactions_created)} transaction(s) copied."
-        )
+        messages.success(request, f"{len(num_transactions_created)} transaction(s) copied.")
         return redirect("transactions")

@@ -2,7 +2,6 @@ from django.urls import re_path
 
 from . import views
 
-
 urlpatterns = [
     re_path(r"^transactions/$", views.transactions, name="transactions"),
     re_path(
@@ -23,7 +22,11 @@ urlpatterns = [
         views.csv_import_list,
         name="csv_import_list",
     ),
-    re_path(r"^statistics-chart/$", views.statistics_chart_view, name="statistics_chart_view"),
+    re_path(
+        r"^statistics-chart/$",
+        views.statistics_chart_view,
+        name="statistics_chart_view",
+    ),
     re_path(r"^budget/$", views.budget, name="budget"),
     re_path(
         r"^budget/edit/(?P<id>[0-9]+)/$",

@@ -134,11 +134,13 @@ class TransactionBaseMixin(object):
 
         self.assertEqual(
             set(transaction1.__class__.objects.values_list("slug", flat=True)),
-            set([
-                "transaction-1-2017-05-01",
-                "transaction-1-2017-05-01_2",
-                "transaction-1-2017-05-01_3",
-            ])
+            set(
+                [
+                    "transaction-1-2017-05-01",
+                    "transaction-1-2017-05-01_2",
+                    "transaction-1-2017-05-01_3",
+                ]
+            ),
         )
 
     def test_save_associate_month(self):

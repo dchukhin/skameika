@@ -440,9 +440,7 @@ class GetTransactionsRegularTotalsWithBudgetTestCase(TestCase):
             amount=100,
             date=date(year=2023, month=6, day=15),
         )
-        results, _ = utils.get_transactions_regular_totals(
-            self.month, budget_by_category={}
-        )
+        results, _ = utils.get_transactions_regular_totals(self.month, budget_by_category={})
         for cat_data in results.values():
             self.assertNotIn("budgeted", cat_data)
 
@@ -498,9 +496,7 @@ class GetTransactionsRegularTotalsWithBudgetTestCase(TestCase):
 
     def test_budget_only_category_running_type_excluded(self):
         """A budget-only category with running total_type is not included."""
-        category = factories.ExpenseCategoryFactory(
-            total_type=models.Category.TOTAL_TYPE_RUNNING
-        )
+        category = factories.ExpenseCategoryFactory(total_type=models.Category.TOTAL_TYPE_RUNNING)
         budget_by_category = {category.id: Decimal("100.00")}
 
         results, _ = utils.get_transactions_regular_totals(

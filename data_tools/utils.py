@@ -1,12 +1,12 @@
 import csv
 import logging
 from datetime import datetime
+
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.text import slugify
 
-from data_tools.models import CSVImport, TitleMapping, CategoryMapping
-from occurrence.models import ExpenseTransaction, EarningTransaction, Category, Month
-
+from data_tools.models import CategoryMapping, TitleMapping
+from occurrence.models import Category, EarningTransaction, ExpenseTransaction, Month
 
 logger = logging.getLogger(__name__)
 
@@ -72,9 +72,7 @@ def ingest_csv(csv_import):
     TYPE_EXPENSE = "expense"
 
     # Load all title mappings into a dictionary for efficient lookup
-    title_mappings = dict(
-        TitleMapping.objects.values_list("source_title", "canonical_title")
-    )
+    title_mappings = dict(TitleMapping.objects.values_list("source_title", "canonical_title"))
 
     # Load all category mappings into a dictionary for efficient lookup
     category_mappings = {
@@ -122,13 +120,9 @@ def ingest_csv(csv_import):
             try:
                 category = Category.objects.get(name__iexact=row["Category"])
             except ObjectDoesNotExist:
-                categories = Category.objects.filter(
-                    name__icontains=default_category_name
-                )
+                categories = Category.objects.filter(name__icontains=default_category_name)
                 if categories.count() > 1:
-                    category = categories.filter(
-                        name__icontains=expense_or_earning
-                    ).first()
+                    category = categories.filter(name__icontains=expense_or_earning).first()
                 if not category:
                     category = categories.first()
 
@@ -146,9 +140,7 @@ def ingest_csv(csv_import):
                     title=mapped_title, amount=amount, date=transaction_date
                 ).first()
                 if existing_transaction:
-                    logger.info(
-                        f"Transaction '{mapped_title}' already exists. Skipping."
-                    )
+                    logger.info(f"Transaction '{mapped_title}' already exists. Skipping.")
                     rows_skipped += 1
                     continue
 
@@ -170,9 +162,7 @@ def ingest_csv(csv_import):
                     title=mapped_title, amount=amount, date=transaction_date
                 ).first()
                 if existing_transaction:
-                    logger.info(
-                        f"Transaction '{mapped_title}' already exists. Skipping."
-                    )
+                    logger.info(f"Transaction '{mapped_title}' already exists. Skipping.")
                     rows_skipped += 1
                     continue
 
@@ -192,12 +182,8 @@ def ingest_csv(csv_import):
 
     count_transactions_created = 0
     if not errors:
-        expense_transactions_created = ExpenseTransaction.objects.bulk_create(
-            expense_transactions
-        )
-        earning_transactions_created = EarningTransaction.objects.bulk_create(
-            earning_transactions
-        )
+        expense_transactions_created = ExpenseTransaction.objects.bulk_create(expense_transactions)
+        earning_transactions_created = EarningTransaction.objects.bulk_create(earning_transactions)
         count_transactions_created = len(expense_transactions_created) + len(
             earning_transactions_created
         )

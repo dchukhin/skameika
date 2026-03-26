@@ -116,9 +116,7 @@ def get_transactions_regular_totals(
                     ],
                 }
                 if budget_by_category:
-                    category_dict[parent_id]["budgeted"] = budget_by_category.get(
-                        parent_id
-                    )
+                    category_dict[parent_id]["budgeted"] = budget_by_category.get(parent_id)
         else:
             # If this Category is already in the category_dict, then just add
             # its amount to the total already there
@@ -147,15 +145,11 @@ def get_transactions_regular_totals(
                         "name": cat.parent.name,
                         "total": 0,
                         "budgeted": budget_by_category.get(cat.parent_id),
-                        "children": [
-                            _make_child(cat.name, 0, cat.id)
-                        ],
+                        "children": [_make_child(cat.name, 0, cat.id)],
                     }
                 # If parent exists but this child isn't there yet, add it
                 else:
-                    child_names = {
-                        c["name"] for c in category_dict[cat.parent_id]["children"]
-                    }
+                    child_names = {c["name"] for c in category_dict[cat.parent_id]["children"]}
                     if cat.name not in child_names:
                         category_dict[cat.parent_id]["children"].append(
                             _make_child(cat.name, 0, cat.id)

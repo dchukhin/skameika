@@ -1,7 +1,7 @@
+import os
 import sys
 
 from skameika.settings.base import *  # noqa
-
 
 DEBUG = True
 
