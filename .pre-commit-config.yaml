@@ -1,19 +1,12 @@
 repos:
-  - repo: https://github.com/psf/black
-    rev: 23.9.1
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.10
     hooks:
-      - id: black
-        language_version: python3.11
+      - id: ruff
+        args: [--fix]
         exclude: migrations
-  - repo: https://github.com/PyCQA/flake8
-    rev: 6.1.0
-    hooks:
-      - id: flake8
-        exclude: settings|migrations
-  - repo: https://github.com/pre-commit/mirrors-isort
-    rev: v5.10.1
-    hooks:
-      - id: isort
+      - id: ruff-format
+        exclude: migrations
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
     hooks:
