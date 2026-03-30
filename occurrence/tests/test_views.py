@@ -1712,7 +1712,7 @@ class TestTotalsViewBudgetColumn(TestCase):
         response = self.client.get(self.url_current_month)
 
         # 50/100 = 50%
-        self.assertContains(response, "progress-bar-success")
+        self.assertContains(response, "bg-success")
         self.assertContains(response, "50%")
 
     def test_totals_progress_bar_expense_over_budget(self):
@@ -1727,7 +1727,7 @@ class TestTotalsViewBudgetColumn(TestCase):
 
         response = self.client.get(self.url_current_month)
 
-        self.assertContains(response, "progress-bar-danger")
+        self.assertContains(response, "bg-danger")
         # Shows actual percentage (150%), not capped
         self.assertContains(response, "150%")
 
@@ -1744,7 +1744,7 @@ class TestTotalsViewBudgetColumn(TestCase):
         response = self.client.get(self.url_current_month)
 
         # Earnings: under budget = danger
-        self.assertContains(response, "progress-bar-danger")
+        self.assertContains(response, "bg-danger")
         self.assertContains(response, "30%")
 
     def test_totals_progress_bar_earning_at_budget(self):
@@ -1759,7 +1759,7 @@ class TestTotalsViewBudgetColumn(TestCase):
 
         response = self.client.get(self.url_current_month)
 
-        self.assertContains(response, "progress-bar-success")
+        self.assertContains(response, "bg-success")
         self.assertContains(response, "100%")
 
     def test_totals_no_progress_bar_without_budget(self):
@@ -1771,8 +1771,8 @@ class TestTotalsViewBudgetColumn(TestCase):
 
         response = self.client.get(self.url_current_month)
 
-        self.assertNotContains(response, "progress-bar-success")
-        self.assertNotContains(response, "progress-bar-danger")
+        self.assertNotContains(response, "bg-success")
+        self.assertNotContains(response, "bg-danger")
 
     def test_expense_budget_total_in_context(self):
         """expense_budget_total sums all expense category budgets."""
