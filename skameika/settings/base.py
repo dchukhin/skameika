@@ -78,7 +78,7 @@ WSGI_APPLICATION = "skameika.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql_psycopg2",
+        "ENGINE": "django.db.backends.postgresql",
         "NAME": "skameika",
         "USER": "",
         "PASSWORD": "",
@@ -90,10 +90,7 @@ DATABASES = {
 if os.getenv("DATABASE_URL"):
     import dj_database_url
 
-    db_from_env = dj_database_url.config(
-        conn_max_age=500,
-        ssl_require=os.getenv("DATABASE_SSL", False),
-    )
+    db_from_env = dj_database_url.config(conn_max_age=500)
     DATABASES["default"].update(db_from_env)
 
 
@@ -166,8 +163,6 @@ TIME_ZONE = "America/New_York"
 
 USE_I18N = True
 
-USE_L10N = True
-
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
@@ -208,7 +203,6 @@ AUTH_PASSWORD_VALIDATORS = [
 # for even more suggestions that you might want to add to the settings, depending
 # on how the site uses SSL.
 SECURE_CONTENT_TYPE_NOSNIFF = True
-SECURE_BROWSER_XSS_FILTER = True
 CSRF_COOKIE_HTTPONLY = True
 X_FRAME_OPTIONS = "DENY"
 
