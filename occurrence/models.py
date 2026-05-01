@@ -209,7 +209,12 @@ class MonthlyStatistic(models.Model):
         return "{} for {}".format(self.statistic, self.month)
 
     class Meta:
-        unique_together = (("statistic", "month"),)
+        constraints = [
+            models.UniqueConstraint(
+                fields=["statistic", "month"],
+                name="unique_monthlystatistic_statistic_month",
+            )
+        ]
         ordering = ["statistic__order"]
 
 
@@ -224,5 +229,10 @@ class ExpectedMonthlyCategoryTotal(models.Model):
         return "Expected amount for {} in {}".format(self.category, self.month)
 
     class Meta:
-        unique_together = (("category", "month"),)
+        constraints = [
+            models.UniqueConstraint(
+                fields=["category", "month"],
+                name="unique_expectedmonthlycategorytotal_category_month",
+            )
+        ]
         ordering = ["category__order"]

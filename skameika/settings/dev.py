@@ -22,11 +22,6 @@ SECRET_KEY = os.environ.get("SECRET_KEY", "d5ml=eg4)$%ma736w4^7u)14^^frsm2w@%8#a
 
 # Special test settings
 if "test" in sys.argv:
-    PASSWORD_HASHERS = (
-        "django.contrib.auth.hashers.SHA1PasswordHasher",
-        "django.contrib.auth.hashers.MD5PasswordHasher",
-    )
-
     LOGGING["root"]["handlers"] = []
 
 MIDDLEWARE += ["debug_toolbar.middleware.DebugToolbarMiddleware"]

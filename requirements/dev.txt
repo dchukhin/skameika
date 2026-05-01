@@ -10,4 +10,4 @@ coverage==7.13.5
 ipdb
 
 # For running lint, etc. hooks on commits
-pre-commit==4.5.1
+pre-commit==4.6.0
