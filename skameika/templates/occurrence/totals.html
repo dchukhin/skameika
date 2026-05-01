@@ -60,14 +60,8 @@
       </tr>
       {% for child_category in category.children %}
         <tr class="category-row">
-          <td class="col-sm-4" id="name-{{ child_category.name }}">
-              <span class="col-sm-1"></span>
-              {{ child_category.name }}
-          </td>
-          <td id="total-{{ child_category.name }}">
-            <span class="col-sm-1"></span>
-            {{ child_category.total }}
-          </td>
+          <td class="col-sm-4 ps-4" id="name-{{ child_category.name }}">{{ child_category.name }}</td>
+          <td id="total-{{ child_category.name }}">{{ child_category.total }}</td>
           <td id="budgeted-{{ child_category.name }}">{% if child_category.budgeted != None %}{{ child_category.budgeted }}{% else %}-{% endif %}</td>
           <td>
             {% if child_category.progress_percent != None %}
@@ -133,14 +127,8 @@
       </tr>
       {% for child_category in category.children %}
         <tr class="category-row">
-          <td class="col-sm-4" id="name-{{ child_category.name }}">
-              <span class="col-sm-1"></span>
-              {{ child_category.name }}
-          </td>
-          <td id="total-{{ child_category.name }}">
-            <span class="col-sm-1"></span>
-            {{ child_category.total }}
-          </td>
+          <td class="col-sm-4 ps-4" id="name-{{ child_category.name }}">{{ child_category.name }}</td>
+          <td id="total-{{ child_category.name }}">{{ child_category.total }}</td>
           <td id="budgeted-{{ child_category.name }}">{% if child_category.budgeted != None %}{{ child_category.budgeted }}{% else %}-{% endif %}</td>
           <td>
             {% if child_category.progress_percent != None %}
