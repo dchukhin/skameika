@@ -29,7 +29,7 @@ MEDIA_ROOT = os.path.join(PUBLIC_ROOT, "media")
 
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.memcached.MemcachedCache",
+        "BACKEND": "django.core.cache.backends.memcached.PyMemcacheCache",
         "LOCATION": "%(CACHE_HOST)s" % os.environ,
     }
 }
