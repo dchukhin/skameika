@@ -78,6 +78,25 @@ class Month(models.Model):
         )
 
 
+def get_or_create_month_for_date_obj(date_obj):
+    """Get or create a Month object for a date object.
+
+    This lives in models.py instead of utils.py because utils.py already
+    imports models, so importing utils from here would create a circular
+    import.
+    """
+    try:
+        month = Month.objects.get(month=date_obj.month, year=date_obj.year)
+    except Month.DoesNotExist:
+        month = Month.objects.create(
+            month=date_obj.month,
+            year=date_obj.year,
+            name=date_obj.strftime("%B, %Y"),
+            slug=slugify(date_obj.strftime("%B, %Y")),
+        )
+    return month
+
+
 class TransactionBase(models.Model):
     """An abstract base model for Transaction-like models."""
 

@@ -76,6 +76,62 @@ class TestMonth(TestCase):
         self.assertEqual(str(month), month.name)
 
 
+class GetOrCreateMonthForDateObjTestCase(TestCase):
+    """Test case for the get_or_create_month_for_date_obj() function."""
+
+    def test_month_exists(self):
+        """If a Month for the date already exists, then it is returned."""
+        month = factories.MonthFactory(year=2017, month=9, name="September, 2017")
+        date_obj = date(year=month.year, month=month.month, day=1)
+
+        returned_month = models.get_or_create_month_for_date_obj(date_obj)
+
+        self.assertEqual(returned_month, month)
+        self.assertEqual(models.Month.objects.count(), 1)
+
+    def test_month_does_not_exist(self):
+        """If a Month for the date does not exist, then a new Month is created."""
+        date_obj = date(year=2018, month=1, day=2)
+
+        returned_month = models.get_or_create_month_for_date_obj(date_obj)
+
+        self.assertEqual(returned_month.year, date_obj.year)
+        self.assertEqual(returned_month.month, date_obj.month)
+        self.assertEqual(returned_month.name, "January, 2018")
+        self.assertEqual(returned_month.slug, "january-2018")
+        self.assertEqual(models.Month.objects.count(), 1)
+
+    def test_repeated_calls_do_not_create_duplicates(self):
+        """Calling this more than once for the same date reuses the same Month."""
+        date_obj = date(year=2019, month=3, day=1)
+
+        first_month = models.get_or_create_month_for_date_obj(date_obj)
+        second_month = models.get_or_create_month_for_date_obj(date_obj)
+
+        self.assertEqual(first_month, second_month)
+        self.assertEqual(models.Month.objects.count(), 1)
+
+    def test_different_days_in_same_month_reuse_the_month(self):
+        """Two dates in the same month and year resolve to the same Month."""
+        first_month = models.get_or_create_month_for_date_obj(date(year=2019, month=3, day=1))
+        second_month = models.get_or_create_month_for_date_obj(date(year=2019, month=3, day=28))
+
+        self.assertEqual(first_month, second_month)
+        self.assertEqual(models.Month.objects.count(), 1)
+
+    def test_invalid_date_obj(self):
+        """Test passing invalid date_obj values."""
+        for invalid_value in [
+            "2020-01-01",
+            "",
+            None,
+            [],
+            {"something": "something else"},
+        ]:
+            with self.assertRaises(AttributeError):
+                models.get_or_create_month_for_date_obj(invalid_value)
+
+
 class TransactionBaseMixin(object):
     """
     Mixin for Transaction-like models inheriting from TransactionBase.

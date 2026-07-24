@@ -503,7 +503,7 @@ def copy_transactions(request):
             return render(request, "occurrence/copy_transactions.html", context)
 
         # Determine the Month for the selected date.
-        month = utils.get_or_create_month_for_date_obj(new_date_obj)
+        month = models.get_or_create_month_for_date_obj(new_date_obj)
 
         # Create new transactions, based on the chosen transactions' data.
         if transaction_type == models.Category.TYPE_EXPENSE:
