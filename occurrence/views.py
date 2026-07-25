@@ -6,7 +6,6 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.dateparse import parse_date
-from django.utils.text import slugify
 from django.views.decorators.http import require_http_methods
 
 from data_tools.models import CSVImport
@@ -20,11 +19,7 @@ def transactions(request, *args, **kwargs):
     if request.GET.get("month"):
         current_month = get_object_or_404(models.Month.objects.all(), slug=request.GET.get("month"))
     else:
-        current_month = models.Month.objects.get_or_create(
-            year=date.today().year,
-            month=date.today().month,
-            name=date.today().strftime("%B, %Y"),
-        )[0]
+        current_month = models.get_or_create_month_for_date_obj(date.today())
     expense_transactions = models.ExpenseTransaction.objects.filter(
         month=current_month
     ).select_related("category")
@@ -81,12 +76,7 @@ def totals(request, *args, **kwargs):
     # If the user did not provide a month_slug, then redirect to the totals
     # for the current month
     if not month_slug:
-        current_month = models.Month.objects.get_or_create(
-            year=date.today().year,
-            month=date.today().month,
-            name=date.today().strftime("%B, %Y"),
-            slug=slugify(date.today().strftime("%B, %Y")),
-        )[0]
+        current_month = models.get_or_create_month_for_date_obj(date.today())
         return redirect("{}?month={}".format(reverse("totals"), current_month.slug))
 
     month = get_object_or_404(models.Month.objects.all(), slug=month_slug)
@@ -251,11 +241,7 @@ def budget(request):
     if request.GET.get("month"):
         current_month = get_object_or_404(models.Month.objects.all(), slug=request.GET.get("month"))
     else:
-        current_month = models.Month.objects.get_or_create(
-            year=date.today().year,
-            month=date.today().month,
-            name=date.today().strftime("%B, %Y"),
-        )[0]
+        current_month = models.get_or_create_month_for_date_obj(date.today())
 
     expense_form = forms.ExpenseBudgetRowForm()
     earning_form = forms.EarningBudgetRowForm()

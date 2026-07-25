@@ -308,3 +308,24 @@ class IngestCSVTest(TestCase):
         # CategoryMapping on the original title is ignored; falls back to the CSV column
         restaurant_1 = ExpenseTransaction.objects.get(title="Restaurant One")
         self.assertEqual(restaurant_1.category, self.category_food_and_drink)
+
+    def test_ingest_csv_reuses_existing_month_with_blank_slug(self):
+        """
+        If a Month for a transaction's year/month already exists but has a
+        blank slug, ingesting a CSV with a transaction dated in that month
+        reuses the existing Month rather than creating a second one.
+        """
+        existing_month = Month.objects.create(year=2025, month=7, name="July, 2025", slug="")
+
+        csv_file_path = os.path.join(os.path.dirname(__file__), "example.csv")
+        with open(csv_file_path, "rb") as the_file:
+            self.csv_import.file = SimpleUploadedFile(
+                "example.csv", the_file.read(), content_type="text/csv"
+            )
+            self.csv_import.save()
+
+        ingest_csv(self.csv_import)
+
+        months = Month.objects.filter(year=2025, month=7)
+        self.assertEqual(months.count(), 1)
+        self.assertEqual(months.get().pk, existing_month.pk)

@@ -6,7 +6,12 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.utils.text import slugify
 
 from data_tools.models import CategoryMapping, TitleMapping
-from occurrence.models import Category, EarningTransaction, ExpenseTransaction, Month
+from occurrence.models import (
+    Category,
+    EarningTransaction,
+    ExpenseTransaction,
+    get_or_create_month_for_date_obj,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -100,12 +105,7 @@ def ingest_csv(csv_import):
                 rows_skipped += 1
                 continue
             else:
-                month, _ = Month.objects.get_or_create(
-                    month=transaction_date.month,
-                    year=transaction_date.year,
-                    name=transaction_date.strftime("%B, %Y"),
-                    slug=slugify(transaction_date.strftime("%B, %Y")),
-                )
+                month = get_or_create_month_for_date_obj(transaction_date)
 
             transaction_type = row["Type"].strip().lower()
 

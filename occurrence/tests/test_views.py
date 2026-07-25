@@ -11,18 +11,20 @@ from data_tools.models import CSVImport
 from .. import models
 from . import factories
 
-# class TestTransactionsView(TestCase):
-#     url_name = 'transactions'
-#     template_name = "occurrence/transactions.html"
-#
-#     def test_get_no_month(self):
-#         """GETting the transactions view without a month, redirects to current Month."""
-#         response = self.client.get(reverse(self.url_name))
-#         self.assertEqual(response.status_code, 200)
-#         self.assertTemplateUsed(response, self.template_name)
-#
-#     def test_get_month(self):
-#         """The view should show all Transactions in the appropriate month."""
+
+class TestTransactionsView(TestCase):
+    url_name = "transactions"
+    template_name = "occurrence/transactions.html"
+
+    def test_get_no_month(self):
+        """GETting the transactions view without a month uses the current Month."""
+        response = self.client.get(reverse(self.url_name))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, self.template_name)
+        current_month = response.context["current_month"]
+        self.assertEqual(current_month.year, date.today().year)
+        self.assertEqual(current_month.month, date.today().month)
+        self.assertNotEqual(current_month.slug, "")
 
 
 class TestTotalsView(TestCase):
@@ -1163,6 +1165,22 @@ class TestBudgetView(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, self.template_name)
         self.assertEqual(response.context["active_month"], self.current_month)
+
+    def test_get_no_month_creates_month_with_slug(self):
+        """If no Month exists yet for the current year/month, GETting creates one with a slug."""
+        models.Month.objects.filter(year=date.today().year, month=date.today().month).delete()
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        active_month = response.context["active_month"]
+        self.assertEqual(active_month.year, date.today().year)
+        self.assertEqual(active_month.month, date.today().month)
+        self.assertNotEqual(active_month.slug, "")
+        self.assertEqual(
+            models.Month.objects.filter(year=date.today().year, month=date.today().month).count(),
+            1,
+        )
 
     def test_get_with_month(self):
         """GETting the budget view with a month param shows that month's budget."""

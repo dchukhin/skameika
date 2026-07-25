@@ -76,6 +76,12 @@ class Month(models.Model):
             "-year",
             "-month",
         )
+        constraints = [
+            models.UniqueConstraint(
+                fields=["year", "month"],
+                name="unique_month_year_month",
+            )
+        ]
 
 
 def get_or_create_month_for_date_obj(date_obj):
@@ -84,16 +90,20 @@ def get_or_create_month_for_date_obj(date_obj):
     This lives in models.py instead of utils.py because utils.py already
     imports models, so importing utils from here would create a circular
     import.
+
+    Uses get_or_create() with the lookup restricted to year/month (name and
+    slug are only set on creation, via defaults), so this is safe under a
+    concurrent race: a losing insert re-fetches the winner's row instead of
+    raising an error.
     """
-    try:
-        month = Month.objects.get(month=date_obj.month, year=date_obj.year)
-    except Month.DoesNotExist:
-        month = Month.objects.create(
-            month=date_obj.month,
-            year=date_obj.year,
-            name=date_obj.strftime("%B, %Y"),
-            slug=slugify(date_obj.strftime("%B, %Y")),
-        )
+    month, _ = Month.objects.get_or_create(
+        year=date_obj.year,
+        month=date_obj.month,
+        defaults={
+            "name": date_obj.strftime("%B, %Y"),
+            "slug": slugify(date_obj.strftime("%B, %Y")),
+        },
+    )
     return month
 
 
@@ -149,19 +159,8 @@ class TransactionBase(models.Model):
             # This is a unique slug, so set it to self.slug
             self.slug = potential_slug
 
-        # Try to find a Month for this Transaction's date
-        try:
-            month = Month.objects.get(month=self.date.month, year=self.date.year)
-        except Month.DoesNotExist:
-            # A Month for this Transaction's date does not exist, so create one
-            month = Month.objects.create(
-                month=self.date.month,
-                year=self.date.year,
-                name=self.date.strftime("%B, %Y"),
-                slug=slugify(self.date.strftime("%B, %Y")),
-            )
         # Associate this Transaction with the correct Month for its date
-        self.month = month
+        self.month = get_or_create_month_for_date_obj(self.date)
 
         super().save(*args, **kwargs)
 

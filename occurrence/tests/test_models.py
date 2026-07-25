@@ -75,6 +75,12 @@ class TestMonth(TestCase):
         month = factories.MonthFactory()
         self.assertEqual(str(month), month.name)
 
+    def test_unique_year_month(self):
+        """A Month's year and month are unique together."""
+        factories.MonthFactory(year=2020, month=1)
+        with self.assertRaises(IntegrityError):
+            factories.MonthFactory(year=2020, month=1)
+
 
 class GetOrCreateMonthForDateObjTestCase(TestCase):
     """Test case for the get_or_create_month_for_date_obj() function."""
@@ -130,6 +136,12 @@ class GetOrCreateMonthForDateObjTestCase(TestCase):
         ]:
             with self.assertRaises(AttributeError):
                 models.get_or_create_month_for_date_obj(invalid_value)
+
+    def test_never_returns_blank_slug(self):
+        """The returned Month always has a non-blank slug, whether newly created or reused."""
+        date_obj = date(year=2019, month=3, day=10)
+        month = models.get_or_create_month_for_date_obj(date_obj)
+        self.assertNotEqual(month.slug, "")
 
 
 class TransactionBaseMixin(object):
@@ -235,6 +247,26 @@ class TransactionBaseMixin(object):
             transaction3.save()
             # Now, transaction3 is associated with june_2017_month
             self.assertEqual(transaction3.month, june_2017_month)
+
+    def test_save_creates_month_with_slug_no_duplicate(self):
+        """
+        Saving a Transaction in a month with no existing Month creates exactly
+        one, correctly slugged Month; a second Transaction in the same month
+        reuses it rather than creating a duplicate.
+        """
+        test_date = date(year=2022, month=3, day=10)
+        self.assertEqual(models.Month.objects.filter(year=2022, month=3).count(), 0)
+
+        transaction1 = self.factory(date=test_date, month=None)
+
+        months = models.Month.objects.filter(year=2022, month=3)
+        self.assertEqual(months.count(), 1)
+        self.assertEqual(transaction1.month, months.get())
+        self.assertNotEqual(transaction1.month.slug, "")
+
+        transaction2 = self.factory(date=test_date, month=None)
+        self.assertEqual(models.Month.objects.filter(year=2022, month=3).count(), 1)
+        self.assertEqual(transaction2.month, transaction1.month)
 
 
 class TestExpenseTransaction(TestCase, TransactionBaseMixin):
