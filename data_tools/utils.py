@@ -7,6 +7,7 @@ from django.utils.text import slugify
 
 from data_tools.models import CategoryMapping, TitleMapping
 from occurrence.models import (
+    SLUG_GENERATED_MAX_LENGTH,
     Category,
     EarningTransaction,
     ExpenseTransaction,
@@ -148,7 +149,11 @@ def ingest_csv(csv_import):
                 earning_transactions.append(
                     EarningTransaction(
                         title=mapped_title,
-                        slug=f"{slugify(mapped_title)}-{transaction_date.strftime('%Y-%m-%d')}-{index}",
+                        slug=(
+                            f"{slugify(mapped_title)[:SLUG_GENERATED_MAX_LENGTH]}"
+                            f"-{transaction_date.strftime('%Y-%m-%d')}"
+                            f"-{csv_import.pk}-{index}"
+                        ),
                         amount=amount,
                         month=month,
                         category=category,
@@ -170,7 +175,11 @@ def ingest_csv(csv_import):
                 expense_transactions.append(
                     ExpenseTransaction(
                         title=mapped_title,
-                        slug=f"{slugify(mapped_title)}-{transaction_date.strftime('%Y-%m-%d')}-{index}",
+                        slug=(
+                            f"{slugify(mapped_title)[:SLUG_GENERATED_MAX_LENGTH]}"
+                            f"-{transaction_date.strftime('%Y-%m-%d')}"
+                            f"-{csv_import.pk}-{index}"
+                        ),
                         amount=amount,
                         month=month,
                         category=category,

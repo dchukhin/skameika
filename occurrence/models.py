@@ -5,6 +5,11 @@ from django.utils.text import slugify
 
 from data_tools.models import CSVImport
 
+# Maximum length of the slugified-title portion of a generated transaction
+# slug. Leaves room within the 255-char slug column for the date and any
+# uniqueness suffixes appended after it.
+SLUG_GENERATED_MAX_LENGTH = 200
+
 
 class Category(models.Model):
     TYPE_EARNING = "income"
@@ -111,7 +116,7 @@ class TransactionBase(models.Model):
     """An abstract base model for Transaction-like models."""
 
     title = models.CharField(max_length=255)
-    slug = models.SlugField(unique=True)
+    slug = models.SlugField(max_length=255, unique=True)
     date = models.DateField(default=date.today)
     month = models.ForeignKey(
         Month,
@@ -145,7 +150,10 @@ class TransactionBase(models.Model):
         ):
             # Create a potential_slug based on title and self.date (including year,
             # month, day)
-            potential_slug = "{}-{}".format(slugify(self.title), self.date.strftime("%Y-%m-%d"))
+            potential_slug = "{}-{}".format(
+                slugify(self.title)[:SLUG_GENERATED_MAX_LENGTH],
+                self.date.strftime("%Y-%m-%d"),
+            )
             # Does a Transaction with this slug already exist?
             count_slugs_same_beginning = self.__class__.objects.filter(
                 slug__startswith=potential_slug

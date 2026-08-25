@@ -268,6 +268,33 @@ class TransactionBaseMixin(object):
         self.assertEqual(models.Month.objects.filter(year=2022, month=3).count(), 1)
         self.assertEqual(transaction2.month, transaction1.month)
 
+    def test_save_long_title_slug_fits(self):
+        """
+        Calling save() limits the generated slug to the maximum length.
+        """
+        test_date = date(year=2025, month=7, day=3)
+        transaction = self.factory(title="a" * 255, slug="", date=test_date)
+
+        # The slug only uses the first 200 characters of the title.
+        self.assertEqual(transaction.slug, "a" * 200 + "-2025-07-03")
+        self.assertLessEqual(len(transaction.slug), 255)
+
+    def test_save_long_title_collision_gets_suffix(self):
+        """
+        For a title that is very long, the slug still gets the suffix.
+        """
+        test_date = date(year=2025, month=7, day=3)
+
+        # Creating a transaction generates a slug for it.
+        transaction1 = self.factory(title="a" * 255, slug="", date=test_date)
+        self.assertEqual(transaction1.slug, f"{'a' * 200}-2025-07-03")
+
+        # Creating a transaction generates a different slug for it.
+        transaction2 = self.factory(title="a" * 255, slug=transaction1.slug, date=test_date)
+        self.assertNotEqual(transaction2.slug, transaction1.slug)
+        self.assertEqual(transaction2.slug, f"{'a' * 200}-2025-07-03_2")
+        self.assertLessEqual(len(transaction2.slug), 255)
+
 
 class TestExpenseTransaction(TestCase, TransactionBaseMixin):
     model_class = models.ExpenseTransaction

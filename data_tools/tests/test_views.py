@@ -123,6 +123,19 @@ class UploadCSVViewTests(TestCase):
         # Check that no Months were created.
         self.assertEqual(Month.objects.count(), 0)
 
+    def test_upload_csv_long_description_succeeds(self):
+        """A row whose Description slugifies past 50 characters imports successfully."""
+        path = os.path.join(os.path.dirname(__file__), "example_long_description.csv")
+        with open(path, "rb") as the_file:
+            upload = SimpleUploadedFile("long.csv", the_file.read(), content_type="text/csv")
+
+        response = self.client.post(reverse("upload_csv"), {"file": upload})
+
+        self.assertRedirects(response, reverse("transactions"))
+        messages = list(get_messages(response.wsgi_request))
+        self.assertEqual(str(messages[0]), "CSV file uploaded. 1 transaction(s) created.")
+        self.assertEqual(ExpenseTransaction.objects.count(), 1)
+
     def test_upload_csv_invalid_method(self):
         response = self.client.patch(reverse("upload_csv"))
         self.assertEqual(response.status_code, 405)

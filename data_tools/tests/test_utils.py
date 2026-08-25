@@ -1,4 +1,5 @@
 import os
+from decimal import Decimal
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
@@ -39,14 +40,18 @@ class IngestCSVTest(TestCase):
         # Create a CSVImport instance
         self.csv_import = CSVImport.objects.create()
 
-    def test_successful_ingestion(self):
-        # Set the (valid) example.csv file as the self.csv_import's file.
-        csv_file_path = os.path.join(os.path.dirname(__file__), "example.csv")
+    def _set_csv_file(self, filename):
+        """Set the named fixture file as self.csv_import's file."""
+        csv_file_path = os.path.join(os.path.dirname(__file__), filename)
         with open(csv_file_path, "rb") as the_file:
             self.csv_import.file = SimpleUploadedFile(
-                "example.csv", the_file.read(), content_type="text/csv"
+                filename, the_file.read(), content_type="text/csv"
             )
             self.csv_import.save()
+
+    def test_successful_ingestion(self):
+        # Set the (valid) example.csv file as the self.csv_import's file.
+        self._set_csv_file("example.csv")
 
         # Currently, there are no Months.
         self.assertEqual(Month.objects.count(), 0)
@@ -100,13 +105,7 @@ class IngestCSVTest(TestCase):
 
     def test_invalid_date_format(self):
         # Set the (invalid) example_invalid_date.csv file as the self.csv_import's file.
-        # Path to the invalid date format CSV file
-        invalid_csv_file_path = os.path.join(os.path.dirname(__file__), "example_invalid_date.csv")
-        with open(invalid_csv_file_path, "rb") as the_file:
-            self.csv_import.file = SimpleUploadedFile(
-                "example.csv", the_file.read(), content_type="text/csv"
-            )
-            self.csv_import.save()
+        self._set_csv_file("example_invalid_date.csv")
 
         # Ingest the CSV file
         count_transactions_created, errors = ingest_csv(self.csv_import)
@@ -134,12 +133,7 @@ class IngestCSVTest(TestCase):
 
     def test_duplicate_transaction(self):
         # Set the (valid) example.csv file as the self.csv_import's file.
-        csv_file_path = os.path.join(os.path.dirname(__file__), "example.csv")
-        with open(csv_file_path, "rb") as the_file:
-            self.csv_import.file = SimpleUploadedFile(
-                "example.csv", the_file.read(), content_type="text/csv"
-            )
-            self.csv_import.save()
+        self._set_csv_file("example.csv")
 
         # Ingest the CSV file several times.
         count_transactions_created1, errors1 = ingest_csv(self.csv_import)
@@ -172,12 +166,7 @@ class IngestCSVTest(TestCase):
         )
 
         # Set the (valid) example.csv file as the self.csv_import's file.
-        csv_file_path = os.path.join(os.path.dirname(__file__), "example.csv")
-        with open(csv_file_path, "rb") as the_file:
-            self.csv_import.file = SimpleUploadedFile(
-                "example.csv", the_file.read(), content_type="text/csv"
-            )
-            self.csv_import.save()
+        self._set_csv_file("example.csv")
 
         # Ingest the CSV file
         count_transactions_created, errors = ingest_csv(self.csv_import)
@@ -213,12 +202,7 @@ class IngestCSVTest(TestCase):
             source_title="Test Restaurant 1",
             category=self.category_other,
         )
-        csv_file_path = os.path.join(os.path.dirname(__file__), "example.csv")
-        with open(csv_file_path, "rb") as the_file:
-            self.csv_import.file = SimpleUploadedFile(
-                "example.csv", the_file.read(), content_type="text/csv"
-            )
-            self.csv_import.save()
+        self._set_csv_file("example.csv")
 
         count_transactions_created, errors = ingest_csv(self.csv_import)
 
@@ -235,12 +219,7 @@ class IngestCSVTest(TestCase):
 
     def test_category_mapping_no_match(self):
         """Rows without a CategoryMapping entry use the CSV Category column as before."""
-        csv_file_path = os.path.join(os.path.dirname(__file__), "example.csv")
-        with open(csv_file_path, "rb") as the_file:
-            self.csv_import.file = SimpleUploadedFile(
-                "example.csv", the_file.read(), content_type="text/csv"
-            )
-            self.csv_import.save()
+        self._set_csv_file("example.csv")
 
         count_transactions_created, errors = ingest_csv(self.csv_import)
 
@@ -264,12 +243,7 @@ class IngestCSVTest(TestCase):
             category=self.category_other,
         )
 
-        csv_file_path = os.path.join(os.path.dirname(__file__), "example.csv")
-        with open(csv_file_path, "rb") as the_file:
-            self.csv_import.file = SimpleUploadedFile(
-                "example.csv", the_file.read(), content_type="text/csv"
-            )
-            self.csv_import.save()
+        self._set_csv_file("example.csv")
 
         count_transactions_created, errors = ingest_csv(self.csv_import)
 
@@ -293,12 +267,7 @@ class IngestCSVTest(TestCase):
             category=self.category_other,
         )
 
-        csv_file_path = os.path.join(os.path.dirname(__file__), "example.csv")
-        with open(csv_file_path, "rb") as the_file:
-            self.csv_import.file = SimpleUploadedFile(
-                "example.csv", the_file.read(), content_type="text/csv"
-            )
-            self.csv_import.save()
+        self._set_csv_file("example.csv")
 
         count_transactions_created, errors = ingest_csv(self.csv_import)
 
@@ -317,15 +286,76 @@ class IngestCSVTest(TestCase):
         """
         existing_month = Month.objects.create(year=2025, month=7, name="July, 2025", slug="")
 
-        csv_file_path = os.path.join(os.path.dirname(__file__), "example.csv")
-        with open(csv_file_path, "rb") as the_file:
-            self.csv_import.file = SimpleUploadedFile(
-                "example.csv", the_file.read(), content_type="text/csv"
-            )
-            self.csv_import.save()
+        self._set_csv_file("example.csv")
 
         ingest_csv(self.csv_import)
 
         months = Month.objects.filter(year=2025, month=7)
         self.assertEqual(months.count(), 1)
         self.assertEqual(months.get().pk, existing_month.pk)
+
+    def test_long_description_creates_transaction(self):
+        """
+        A Description that slugifies to more than 50 characters imports
+        successfully instead of failing with a database error.
+        """
+        self._set_csv_file("example_long_description.csv")
+
+        count_transactions_created, errors = ingest_csv(self.csv_import)
+
+        self.assertEqual(errors, [])
+        self.assertEqual(count_transactions_created, 1)
+        transaction = ExpenseTransaction.objects.get()
+        self.assertEqual(
+            transaction.title,
+            "long description about the transaction that continues for many characters and words",
+        )
+        self.assertLessEqual(len(transaction.slug), 255)
+        self.assertTrue(
+            transaction.slug.startswith(
+                "long-description-about-the-transaction-that-continues-for-many-characters-and-words"
+            )
+        )
+
+    def test_reimport_same_rows_different_amounts(self):
+        """
+        A second import with the same descriptions, dates, and row positions
+        but different amounts (e.g. recurring charges) creates new
+        transactions instead of colliding on identical slugs.
+        """
+        self._set_csv_file("example.csv")
+        count1, errors1 = ingest_csv(self.csv_import)
+        self.assertEqual((count1, errors1), (3, []))
+        self.assertEqual(ExpenseTransaction.objects.count(), 2)
+        self.assertEqual(
+            set(ExpenseTransaction.objects.values_list("amount", flat=True)),
+            set([Decimal("9.02"), Decimal("11.91")]),
+        )
+        self.assertEqual(EarningTransaction.objects.count(), 1)
+        self.assertEqual(
+            set(EarningTransaction.objects.values_list("amount", flat=True)),
+            set([Decimal("-11.91")]),
+        )
+
+        # Same rows with different amounts, in a second import.
+        csv_file_path = os.path.join(os.path.dirname(__file__), "example.csv")
+        with open(csv_file_path) as the_file:
+            modified_csv = the_file.read().replace("9.02", "10.03").replace("11.91", "12.92")
+        second_import = CSVImport.objects.create(
+            file=SimpleUploadedFile("example2.csv", modified_csv.encode(), content_type="text/csv")
+        )
+
+        count2, errors2 = ingest_csv(second_import)
+
+        self.assertEqual(errors2, [])
+        self.assertEqual(count2, 3)
+        self.assertEqual(ExpenseTransaction.objects.count(), 4)
+        self.assertEqual(
+            set(ExpenseTransaction.objects.values_list("amount", flat=True)),
+            set([Decimal("9.02"), Decimal("11.91"), Decimal("10.03"), Decimal("12.92")]),
+        )
+        self.assertEqual(EarningTransaction.objects.count(), 2)
+        self.assertEqual(
+            set(EarningTransaction.objects.values_list("amount", flat=True)),
+            set([Decimal("-11.91"), Decimal("-12.92")]),
+        )
