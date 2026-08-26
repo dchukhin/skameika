@@ -112,14 +112,7 @@ class IngestCSVTest(TestCase):
 
         # Check the returned values.
         self.assertEqual(count_transactions_created, 0)
-        expected_error_msg = (
-            "Invalid date format for row: "
-            "{'Transaction Date': 'July 2 2025', 'Post Date': 'July 3 2025', "
-            "'Description': 'Test Restaurant 2', 'Category': 'Food & Drink', "
-            "'Type': 'Sale', 'Amount': '11.91', 'Memo': ''}. "
-            "Skipping."
-        )
-        self.assertEqual(errors, [expected_error_msg])
+        self.assertEqual(errors, ["Row 2: invalid date 'July 2 2025'."])
 
         # Check that the CSVImport object was updated with row counts
         self.csv_import.refresh_from_db()
@@ -359,3 +352,35 @@ class IngestCSVTest(TestCase):
             set(EarningTransaction.objects.values_list("amount", flat=True)),
             set([Decimal("-11.91"), Decimal("-12.92")]),
         )
+
+    def test_invalid_amounts_report_rows(self):
+        """
+        Unparseable, non-finite, and missing Amounts are each reported with
+        their row number.
+        """
+        self._set_csv_file("example_invalid_amount.csv")
+
+        count_transactions_created, errors = ingest_csv(self.csv_import)
+
+        self.assertEqual(count_transactions_created, 0)
+        self.assertEqual(
+            errors,
+            [
+                "Row 2: invalid amount '$1,234.56'.",
+                "Row 3: invalid amount 'NaN'.",
+                "Row 4: invalid amount None.",
+            ],
+        )
+        self.csv_import.refresh_from_db()
+        self.assertEqual(self.csv_import.rows_skipped, 3)
+
+    def test_amount_stored_as_exact_decimal(self):
+        """Amounts are parsed and stored as exact Decimal values."""
+        self._set_csv_file("example.csv")
+
+        ingest_csv(self.csv_import)
+
+        expense_transaction_amounts = ExpenseTransaction.objects.values_list("amount", flat=True)
+        self.assertEqual(set(expense_transaction_amounts), set([Decimal("9.02"), Decimal("11.91")]))
+        earning_transaction_amounts = EarningTransaction.objects.values_list("amount", flat=True)
+        self.assertEqual(set(earning_transaction_amounts), set([Decimal("-11.91")]))

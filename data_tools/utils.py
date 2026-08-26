@@ -1,6 +1,7 @@
 import csv
 import logging
 from datetime import datetime
+from decimal import Decimal, InvalidOperation
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.text import slugify
@@ -94,13 +95,27 @@ def ingest_csv(csv_import):
     with csv_import.file.open(mode="r") as csvfile:
         reader = csv.DictReader(csvfile)
         for index, row in enumerate(reader):
-            amount = float(row["Amount"])
+            # Parse the amount. Decimal(None) raises TypeError rather than
+            # InvalidOperation (a short row leaves row["Amount"] as None), and
+            # "NaN"/"Infinity" parse successfully, but are not storable amounts,
+            # so both escapes are checked here.
+            amount = None
+            try:
+                amount = Decimal(row["Amount"])
+            except (InvalidOperation, TypeError):
+                pass
+            if amount is None or not amount.is_finite():
+                error_msg = f"Row {index + 2}: invalid amount {repr(row['Amount'])[:80]}."
+                errors.append(error_msg)
+                logger.error(error_msg)
+                rows_skipped += 1
+                continue
 
             # Convert the date string to a date object
             try:
                 transaction_date = parse_date(row["Transaction Date"])
             except ValueError:
-                error_msg = f"Invalid date format for row: {row}. Skipping."
+                error_msg = f"Row {index + 2}: invalid date {repr(row['Transaction Date'])[:80]}."
                 errors.append(error_msg)
                 logger.error(error_msg)
                 rows_skipped += 1

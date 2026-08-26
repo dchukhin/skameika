@@ -1,0 +1,4 @@
+Transaction Date,Post Date,Description,Category,Type,Amount,Memo
+2025-07-03,2025-07-03,Test Restaurant 1,Food & Drink,Sale,"$1,234.56",
+2025-07-04,2025-07-04,Test Restaurant 1,Food & Drink,Sale,NaN,
+2025-07-05,2025-07-05,Short Row
