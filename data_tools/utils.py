@@ -3,7 +3,8 @@ import logging
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.db import Error, transaction
 from django.utils.text import slugify
 
 from data_tools.models import CategoryMapping, TitleMapping
@@ -16,6 +17,10 @@ from occurrence.models import (
 )
 
 logger = logging.getLogger(__name__)
+
+# The columns ingest_csv() reads from each row. Other columns are never read,
+# so they are not required.
+REQUIRED_COLUMNS = {"Transaction Date", "Description", "Category", "Type", "Amount"}
 
 
 def get_mapped_title(description, title_mappings):
@@ -71,6 +76,47 @@ def parse_date(date_string):
     raise ValueError(f"Invalid date format: {date_string}")
 
 
+def parse_amount(amount_string):
+    """Convert a CSV Amount value into a Decimal."""
+    try:
+        amount = Decimal(amount_string)
+    except (InvalidOperation, TypeError):
+        # Decimal(None) raises TypeError rather than InvalidOperation (a
+        # short row leaves the Amount cell as None).
+        return None
+    # "NaN" and "Infinity" parse successfully, but are not storable amounts.
+    return amount if amount.is_finite() else None
+
+
+def get_category_for_row(category_name, expense_or_earning):
+    """Find the Category for a row, and fall back to an "Uncategorized" Category."""
+    try:
+        return Category.objects.get(name__iexact=category_name)
+    except ObjectDoesNotExist:
+        category = None
+        categories = Category.objects.filter(name__icontains="Uncategorized")
+        if categories.count() > 1:
+            category = categories.filter(name__icontains=expense_or_earning).first()
+        if not category:
+            category = categories.first()
+        return category
+
+
+def validate_transaction(transaction_instance, row_number, description):
+    """Run model-field validation on an unsaved transaction."""
+    # The month and csv_import fields are excluded, because full_clean()
+    # validates every ForeignKey with an existence query, and both are
+    # guaranteed-saved objects set by this code.
+    try:
+        transaction_instance.full_clean(exclude={"month", "csv_import"}, validate_unique=False)
+    except ValidationError as e:
+        return [
+            f"Row {row_number} ('{description[:60]}'): {field}: {' '.join(field_errors)}"
+            for field, field_errors in e.message_dict.items()
+        ]
+    return []
+
+
 def ingest_csv(csv_import):
     """
     Ingest a CSV file. See example.csv for an example.
@@ -94,17 +140,26 @@ def ingest_csv(csv_import):
 
     with csv_import.file.open(mode="r") as csvfile:
         reader = csv.DictReader(csvfile)
+        if reader.fieldnames:
+            # Excel exports often prefix a UTF-8 BOM onto the
+            # first header name and would make the check below claim a
+            # visibly-present column is missing. FieldFile.open() accepts no
+            # encoding argument, so normalize the decoded fieldnames instead
+            # of opening the file with "utf-8-sig".
+            reader.fieldnames = [name.removeprefix("\ufeff") for name in reader.fieldnames]
+        missing_columns = REQUIRED_COLUMNS - set(reader.fieldnames or [])
+        if missing_columns:
+            error_msg = "File is missing required column(s): {}.".format(
+                ", ".join(sorted(missing_columns))
+            )
+            logger.error(error_msg)
+            csv_import.rows_created = 0
+            csv_import.rows_skipped = 0
+            csv_import.save(update_fields=["rows_created", "rows_skipped"])
+            return 0, [error_msg]
         for index, row in enumerate(reader):
-            # Parse the amount. Decimal(None) raises TypeError rather than
-            # InvalidOperation (a short row leaves row["Amount"] as None), and
-            # "NaN"/"Infinity" parse successfully, but are not storable amounts,
-            # so both escapes are checked here.
-            amount = None
-            try:
-                amount = Decimal(row["Amount"])
-            except (InvalidOperation, TypeError):
-                pass
-            if amount is None or not amount.is_finite():
+            amount = parse_amount(row["Amount"])
+            if amount is None:
                 error_msg = f"Row {index + 2}: invalid amount {repr(row['Amount'])[:80]}."
                 errors.append(error_msg)
                 logger.error(error_msg)
@@ -131,16 +186,7 @@ def ingest_csv(csv_import):
                 expense_or_earning = TYPE_EXPENSE
 
             # Determine the category based on the provided name
-            default_category_name = "Uncategorized"
-            category = None
-            try:
-                category = Category.objects.get(name__iexact=row["Category"])
-            except ObjectDoesNotExist:
-                categories = Category.objects.filter(name__icontains=default_category_name)
-                if categories.count() > 1:
-                    category = categories.filter(name__icontains=expense_or_earning).first()
-                if not category:
-                    category = categories.first()
+            category = get_category_for_row(row["Category"], expense_or_earning)
 
             # Get the mapped title for this transaction
             mapped_title = get_mapped_title(row["Description"], title_mappings)
@@ -160,23 +206,30 @@ def ingest_csv(csv_import):
                     rows_skipped += 1
                     continue
 
-                # Create a new EarningTransaction
-                earning_transactions.append(
-                    EarningTransaction(
-                        title=mapped_title,
-                        slug=(
-                            f"{slugify(mapped_title)[:SLUG_GENERATED_MAX_LENGTH]}"
-                            f"-{transaction_date.strftime('%Y-%m-%d')}"
-                            f"-{csv_import.pk}-{index}"
-                        ),
-                        amount=amount,
-                        month=month,
-                        category=category,
-                        csv_import=csv_import,
-                        pending=True,
-                        date=transaction_date,
-                    )
+                # Create a new EarningTransaction. The name new_transaction
+                # matters, because a variable named transaction would clash with
+                # the django.db.transaction module used below.
+                new_transaction = EarningTransaction(
+                    title=mapped_title,
+                    slug=(
+                        f"{slugify(mapped_title)[:SLUG_GENERATED_MAX_LENGTH]}"
+                        f"-{transaction_date.strftime('%Y-%m-%d')}"
+                        f"-{csv_import.pk}-{index}"
+                    ),
+                    amount=amount,
+                    month=month,
+                    category=category,
+                    csv_import=csv_import,
+                    pending=True,
+                    date=transaction_date,
                 )
+                row_errors = validate_transaction(new_transaction, index + 2, row["Description"])
+                if row_errors:
+                    errors.extend(row_errors)
+                    logger.error("; ".join(row_errors))
+                    rows_skipped += 1
+                    continue
+                earning_transactions.append(new_transaction)
             else:
                 existing_transaction = ExpenseTransaction.objects.filter(
                     title=mapped_title, amount=amount, date=transaction_date
@@ -186,31 +239,53 @@ def ingest_csv(csv_import):
                     rows_skipped += 1
                     continue
 
-                # Create a new ExpenseTransaction
-                expense_transactions.append(
-                    ExpenseTransaction(
-                        title=mapped_title,
-                        slug=(
-                            f"{slugify(mapped_title)[:SLUG_GENERATED_MAX_LENGTH]}"
-                            f"-{transaction_date.strftime('%Y-%m-%d')}"
-                            f"-{csv_import.pk}-{index}"
-                        ),
-                        amount=amount,
-                        month=month,
-                        category=category,
-                        csv_import=csv_import,
-                        pending=True,
-                        date=transaction_date,
-                    )
+                # Create a new ExpenseTransaction. The name new_transaction
+                # matters, because a variable named transaction would clash with
+                # the django.db.transaction module used below.
+                new_transaction = ExpenseTransaction(
+                    title=mapped_title,
+                    slug=(
+                        f"{slugify(mapped_title)[:SLUG_GENERATED_MAX_LENGTH]}"
+                        f"-{transaction_date.strftime('%Y-%m-%d')}"
+                        f"-{csv_import.pk}-{index}"
+                    ),
+                    amount=amount,
+                    month=month,
+                    category=category,
+                    csv_import=csv_import,
+                    pending=True,
+                    date=transaction_date,
                 )
+                row_errors = validate_transaction(new_transaction, index + 2, row["Description"])
+                if row_errors:
+                    errors.extend(row_errors)
+                    logger.error("; ".join(row_errors))
+                    rows_skipped += 1
+                    continue
+                expense_transactions.append(new_transaction)
 
     count_transactions_created = 0
     if not errors:
-        expense_transactions_created = ExpenseTransaction.objects.bulk_create(expense_transactions)
-        earning_transactions_created = EarningTransaction.objects.bulk_create(earning_transactions)
-        count_transactions_created = len(expense_transactions_created) + len(
-            earning_transactions_created
-        )
+        # atomic() allows the database transactions to either both succeed or
+        # both fail, so we avoid some transactions being saved and others not
+        # saved.
+        try:
+            with transaction.atomic():
+                expense_transactions_created = ExpenseTransaction.objects.bulk_create(
+                    expense_transactions
+                )
+                earning_transactions_created = EarningTransaction.objects.bulk_create(
+                    earning_transactions
+                )
+            count_transactions_created = len(expense_transactions_created) + len(
+                earning_transactions_created
+            )
+        except Error:
+            # There was a database error, but give the user a generic message.
+            logger.exception("bulk_create failed during CSV ingest")
+            errors.append(
+                "A database error prevented saving the transactions; see the server logs."
+            )
 
     # Update the CSVImport object with the row counts
     csv_import.rows_created = count_transactions_created

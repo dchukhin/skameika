@@ -1,16 +1,20 @@
 import os
+from datetime import date
 from decimal import Decimal
+from unittest import mock
 
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import DatabaseError
 from django.test import TestCase
 
 from data_tools.models import CategoryMapping, CSVImport, TitleMapping
-from data_tools.utils import ingest_csv
+from data_tools.utils import ingest_csv, validate_transaction
 from occurrence.models import (
     Category,
     EarningTransaction,
     ExpenseTransaction,
     Month,
+    get_or_create_month_for_date_obj,
 )
 
 
@@ -384,3 +388,175 @@ class IngestCSVTest(TestCase):
         self.assertEqual(set(expense_transaction_amounts), set([Decimal("9.02"), Decimal("11.91")]))
         earning_transaction_amounts = EarningTransaction.objects.values_list("amount", flat=True)
         self.assertEqual(set(earning_transaction_amounts), set([Decimal("-11.91")]))
+
+    def test_too_long_title_reports_row_and_field(self):
+        """
+        A Description longer than the title's max_length produces a descriptive error.
+        """
+        self._set_csv_file("example_too_long_title.csv")
+
+        count_transactions_created, errors = ingest_csv(self.csv_import)
+
+        self.assertEqual(count_transactions_created, 0)
+        self.assertEqual(len(errors), 1)
+        expected_error_message = (
+            "Row 2 ('long description about the transaction that continues for "
+            "ma'): title: Ensure this value has at most 255 characters (it has "
+            "300)."
+        )
+        self.assertEqual([expected_error_message], errors)
+        self.assertEqual(ExpenseTransaction.objects.count(), 0)
+        self.csv_import.refresh_from_db()
+        self.assertEqual(self.csv_import.rows_skipped, 1)
+        self.assertEqual(self.csv_import.rows_created, 0)
+
+    def test_missing_category_reports_row_and_field(self):
+        """
+        When no Category matches and no 'Uncategorized' fallback exists, the user gets an error.
+        """
+        Category.objects.all().delete()
+        self._set_csv_file("example.csv")
+
+        count_transactions_created, errors = ingest_csv(self.csv_import)
+
+        self.assertEqual(count_transactions_created, 0)
+        self.assertEqual(len(errors), 3)  # all 3 example.csv rows lack a category
+        self.assertIn("Row 2", errors[0])
+        self.assertIn("category", errors[0])
+        expected_errors = [
+            "Row 2 ('Test Restaurant 1'): category: This field cannot be null.",
+            "Row 3 ('Test Restaurant 2'): category: This field cannot be null.",
+            "Row 4 ('Company A'): category: This field cannot be null.",
+        ]
+        self.assertEqual(expected_errors, errors)
+
+    def test_blank_description_reports_row(self):
+        """
+        A blank Description gives the user an error.
+        """
+        self._set_csv_file("example_blank_description.csv")
+
+        count_transactions_created, errors = ingest_csv(self.csv_import)
+
+        self.assertEqual(count_transactions_created, 0)
+        self.assertEqual(len(errors), 1)
+        expected_error_message = "Row 2 (''): title: This field cannot be blank."
+        self.assertEqual([expected_error_message], errors)
+        self.assertIn("Row 2", errors[0])
+        self.assertIn("title", errors[0])
+        self.assertIn("blank", errors[0])
+        self.assertEqual(ExpenseTransaction.objects.count(), 0)
+
+    def test_missing_required_columns(self):
+        """
+        A file without the required columns gives the user an error.
+        """
+        self._set_csv_file("example_missing_columns.csv")
+
+        count_transactions_created, errors = ingest_csv(self.csv_import)
+
+        self.assertEqual(count_transactions_created, 0)
+        self.assertEqual(
+            errors,
+            [
+                "File is missing required column(s): "
+                "Amount, Category, Description, Transaction Date, Type."
+            ],
+        )
+        self.csv_import.refresh_from_db()
+        self.assertEqual(self.csv_import.rows_created, 0)
+        self.assertEqual(self.csv_import.rows_skipped, 0)
+
+    def test_bulk_create_failure_reports_generic_error(self):
+        """
+        If a db error occurs during the save, it is logged, but the user gets a generic message.
+        """
+        self._set_csv_file("example.csv")
+
+        with mock.patch.object(
+            ExpenseTransaction.objects,
+            "bulk_create",
+            side_effect=DatabaseError("value too long for constraint xyz_123"),
+        ):
+            count_transactions_created, errors = ingest_csv(self.csv_import)
+
+        self.assertEqual(count_transactions_created, 0)
+        self.assertEqual(
+            errors,
+            ["A database error prevented saving the transactions; see the server logs."],
+        )
+        self.assertNotIn("xyz_123", errors[0])
+        self.csv_import.refresh_from_db()
+        self.assertEqual(self.csv_import.rows_created, 0)
+
+    def test_bulk_create_failure_rolls_back_partial_insert(self):
+        """
+        The final inserts are atomic: if the earning bulk_create fails
+        after the expense one succeeded, both roll back.
+        """
+        self._set_csv_file("example.csv")
+
+        with mock.patch.object(
+            EarningTransaction.objects, "bulk_create", side_effect=DatabaseError("boom")
+        ):
+            count_transactions_created, errors = ingest_csv(self.csv_import)
+
+        self.assertEqual(count_transactions_created, 0)
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(ExpenseTransaction.objects.count(), 0)  # rolled back
+        self.csv_import.refresh_from_db()
+        self.assertEqual(self.csv_import.rows_created, 0)
+
+    def test_bom_header_is_accepted(self):
+        """
+        A UTF-8 BOM before the header (such as in Excel exports) does not trigger errors.
+        """
+        csv_file_path = os.path.join(os.path.dirname(__file__), "example.csv")
+        with open(csv_file_path, "rb") as the_file:
+            content = b"\xef\xbb\xbf" + the_file.read()
+        self.csv_import.file = SimpleUploadedFile("bom.csv", content, content_type="text/csv")
+        self.csv_import.save()
+
+        count_transactions_created, errors = ingest_csv(self.csv_import)
+
+        self.assertEqual(errors, [])
+        self.assertEqual(count_transactions_created, 3)
+
+
+class ValidateTransactionTest(TestCase):
+    def test_valid_transaction_returns_no_errors(self):
+        """A fully valid unsaved transaction produces an empty error list."""
+        category = Category.objects.create(name="Cat", type_cat=Category.TYPE_EXPENSE, slug="cat")
+        month = get_or_create_month_for_date_obj(date(2025, 7, 3))
+        transaction = ExpenseTransaction(
+            title="OK",
+            slug="ok-2025-07-03-0",
+            amount=Decimal("1.00"),
+            month=month,
+            category=category,
+            pending=True,
+            date=date(2025, 7, 3),
+        )
+        self.assertEqual(validate_transaction(transaction, 2, "OK"), [])
+
+    def test_invalid_transaction_reports_each_bad_field(self):
+        """
+        Each invalid field yields one error naming the row, description, and field of the error.
+        """
+        month = get_or_create_month_for_date_obj(date(2025, 7, 3))
+        transaction = ExpenseTransaction(
+            title="x" * 300,  # longer than the 255-char field
+            slug="s",
+            amount=Decimal("1.00"),
+            month=month,
+            category=None,  # not nullable
+            pending=True,
+            date=date(2025, 7, 3),
+        )
+        errors = validate_transaction(transaction, 5, "x" * 300)
+        self.assertEqual(len(errors), 2)
+        for error in errors:
+            self.assertIn("Row 5", error)
+            self.assertIn(("x" * 300)[:60], error)
+        self.assertTrue(any("title" in e for e in errors))
+        self.assertTrue(any("category" in e for e in errors))

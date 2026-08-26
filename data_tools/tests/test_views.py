@@ -136,6 +136,45 @@ class UploadCSVViewTests(TestCase):
         self.assertEqual(str(messages[0]), "CSV file uploaded. 1 transaction(s) created.")
         self.assertEqual(ExpenseTransaction.objects.count(), 1)
 
+    def test_upload_csv_too_long_title_shows_row_and_field(self):
+        """The user-facing message names the failing row and field."""
+        path = os.path.join(os.path.dirname(__file__), "example_too_long_title.csv")
+        with open(path, "rb") as the_file:
+            upload = SimpleUploadedFile("long-title.csv", the_file.read(), content_type="text/csv")
+
+        response = self.client.post(reverse("upload_csv"), {"file": upload})
+
+        self.assertEqual(response.status_code, 200)
+        messages = list(get_messages(response.wsgi_request))
+        self.assertEqual(len(messages), 1)
+        message = str(messages[0])
+        self.assertIn("Row 2", message)
+        self.assertIn("title", message)
+        expected_error_message = (
+            "Error(s) processing file: Row 2 ('long description about the "
+            "transaction that continues for ma'): title: Ensure this value has "
+            "at most 255 characters (it has 300)."
+        )
+        self.assertEqual(expected_error_message, message)
+        self.assertEqual(ExpenseTransaction.objects.count(), 0)
+
+    def test_upload_undecodable_file(self):
+        """A file that cannot be decoded as text still gets an error message
+        instead of a server error."""
+        upload = SimpleUploadedFile(
+            "binary.csv",  # .csv name/content-type so only the decode step can fail
+            b"\x89PNG\r\n\x1a\n\x00\xff\xfe\xfd",
+            content_type="text/csv",
+        )
+
+        response = self.client.post(reverse("upload_csv"), {"file": upload})
+
+        self.assertEqual(response.status_code, 200)
+        message = str(list(get_messages(response.wsgi_request))[0])
+        self.assertTrue(message.startswith("Error(s) processing file:"))
+        self.assertIn("invalid start byte", message)
+        self.assertEqual(ExpenseTransaction.objects.count(), 0)
+
     def test_upload_csv_invalid_method(self):
         response = self.client.patch(reverse("upload_csv"))
         self.assertEqual(response.status_code, 405)
