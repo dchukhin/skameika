@@ -21,3 +21,5 @@ node_modules
 */static/js/vendors.js
 */static/libs/modernizr.js
 */static/css
+.venv/
+notes/
